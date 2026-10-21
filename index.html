@@ -637,7 +637,7 @@ render();
     #krblAdminModal{position:fixed;inset:0;z-index:1002;background:#001b11aa;display:none;align-items:center;justify-content:center;padding:16px}
     #krblAdminModal .panel{width:min(900px,100%);max-height:88vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
     #krblAdminModal h2{color:#004b2c;margin:0 0 8px}
-    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%;box-sizing:border-box;width:100%}
+    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%;box-sizing:border-box;width:100%}#krblAdminMandis{height:170px!important;overflow-y:auto;background:#fff}
     #krblAdminModal button{padding:9px 12px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer}
     #krblAdminModal .secondary{background:#f7e3bd;color:#243328}
     #krblAdminRoles{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
@@ -665,8 +665,12 @@ render();
         <label class="adminField">Email address<input id="krblAdminEmail" type="email" placeholder="name@company.com"></label>
         <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select></label>
         <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
-        <label class="adminField">Assigned mandi code(s)<input id="krblAdminMandiCodes" placeholder="D019, H061 (comma-separated)"></label>
-        <label class="adminField">Assigned mandi name(s)<input id="krblAdminMandiNames" placeholder="Narela, Gohana (comma-separated)"></label>
+        <label class="adminField adminWide">Assigned mandis — scroll and select one or more
+          <select id="krblAdminMandis" multiple size="7" style="min-height:150px">
+            <option disabled>Loading mandi list…</option>
+          </select>
+          <span style="font-weight:400;color:#596658">Tip: hold Ctrl (Windows) or Cmd (Mac) to select multiple mandis. The list combines saved mandi records and the common mandi list.</span>
+        </label>
         <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
         <div class="adminField" style="justify-content:end"><button id="krblAdminSave" type="button">Save employee profile + role</button></div>
       </div>
@@ -679,14 +683,32 @@ render();
   const el=id=>document.getElementById(id);
   const msg=s=>{el('krblAdminMsg').textContent=s;};
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const knownMandis=[
+    ['D019','Narela'],['D006','Najafgarh'],['H061','Gohana'],['H087','Jiwan Nagar'],['H018','Jiwan Nagar'],['H072','Sirsa'],['H088','Sonepat'],['H029','Narnaund'],['','Rohtak'],['','Barwala'],['','Narela'],['','Sonepat'],['','Gohana'],['','Sirsa'],['','Jiwan Nagar']
+  ];
+  const mandiKey=(code,name)=>String(code||'').trim().toUpperCase()+'|'+String(name||'').trim();
+  async function loadMandiOptions(selected=[]){
+    const select=el('krblAdminMandis');
+    const found=new Map();
+    knownMandis.forEach(([code,name])=>{const key=mandiKey(code,name);if(name)found.set(key,{code,name});});
+    if(krblSupabase){
+      const res=await krblSupabase.from('krbl_mandi_issues').select('mandi_code,mandi_name').limit(5000);
+      if(!res.error)(res.data||[]).forEach(r=>{if(r.mandi_name||r.mandi_code){const key=mandiKey(r.mandi_code,r.mandi_name);found.set(key,{code:r.mandi_code||'',name:r.mandi_name||r.mandi_code||'Unnamed Mandi'});}});
+    }
+    const sorted=[...found.entries()].sort((a,b)=>(a[1].name+' '+a[1].code).localeCompare(b[1].name+' '+b[1].code));
+    select.innerHTML=sorted.map(([key,m])=>'<option value="'+esc(key)+'">'+esc(m.name+(m.code?' ('+m.code+')':''))+'</option>').join('');
+    const selectedKeys=new Set(selected.map(m=>mandiKey(m.code,m.name)));
+    [...select.options].forEach(o=>o.selected=selectedKeys.has(o.value));
+  }
+  const getSelectedMandis=()=>[...el('krblAdminMandis').selectedOptions].map(o=>{const parts=o.value.split('|');return {code:parts[0],name:parts.slice(1).join('|')};});
   async function loadProfiles(){
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
-    const host=el('krblAdminList');host.textContent='Loading employee profiles…';
+    const host=el('krblAdminList');host.textContent='Loading employee profiles…';await loadMandiOptions();
     const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,email,department,area,mandi_code,mandi_name,assigned_mandis,active,created_at').order('full_name',{ascending:true}).limit(300);
     if(res.error){host.textContent='Profile table is not ready yet. Run the updated OFFICE_TEAM_SETUP.sql in Supabase, then refresh. Details: '+res.error.message;return;}
     if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
     host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Email</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button></td></tr>').join('')+'</tbody></table>';
-    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminEmail').value=p.email||'';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';el('krblAdminMandiCodes').value=(p.assigned_mandis||[]).map(x=>x.code||'').filter(Boolean).join(', ')||p.mandi_code||'';el('krblAdminMandiNames').value=(p.assigned_mandis||[]).map(x=>x.name||'').filter(Boolean).join(', ')||p.mandi_name||'';el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
+    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminEmail').value=p.email||'';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
   }
   btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
   el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
@@ -696,12 +718,12 @@ render();
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const uid=el('krblAdminUid').value.trim(), name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
     const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
-    const codes=el('krblAdminMandiCodes').value.split(',').map(x=>x.trim()).filter(Boolean), names=el('krblAdminMandiNames').value.split(',').map(x=>x.trim()).filter(Boolean);
+    const selectedMandis=getSelectedMandis();
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase UID for the existing account.');return;}
     if(!name){msg('Enter employee name.');return;}
     if(!email||!/^\S+@\S+\.\S+$/.test(email)){msg('Enter a valid email address.');return;}
     if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
-    const assigned_mandis=codes.map((code,i)=>({code,name:names[i]||codes[i]}));
+    const assigned_mandis=selectedMandis;const codes=assigned_mandis.map(x=>x.code).filter(Boolean), names=assigned_mandis.map(x=>x.name).filter(Boolean);
     msg('Saving employee profile…');
     const profile={user_id:uid,full_name:name,employee_id:empId||null,email,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
     const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
