@@ -211,11 +211,13 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
    <div class="grid">
     <div><label for="receiptDate">Receipt Date *</label><input type="date" id="receiptDate" required></div>
     <div><label for="receiptWhite">White Roll Received (packs; 1 pack = 27 PCS)</label><input type="number" id="receiptWhite" min="0" step="any" value="0"></div>
+    <div><label for="receiptWhitePcs">White Roll Received (loose PCS)</label><input type="number" id="receiptWhitePcs" min="0" step="any" value="0"></div>
     <div><label for="receiptBlack">Black Ribbon Received (packs; 1 pack = 10 PCS)</label><input type="number" id="receiptBlack" min="0" step="any" value="0"></div>
+    <div><label for="receiptBlackPcs">Black Ribbon Received (loose PCS)</label><input type="number" id="receiptBlackPcs" min="0" step="any" value="0"></div>
     <div><label for="receiptRef">PO / Challan / Reference</label><input id="receiptRef" placeholder="Enter reference number"></div>
     <div class="full"><label for="receiptNote">Remarks</label><input id="receiptNote" placeholder="Supplier, pending quantity, etc."></div>
    </div>
-   <div class="hint">Decimal quantities are supported (for example, 14.5, 15.3, 12.75). Pack conversion: 1 White Roll pack = 27 PCS; 1 Black Ribbon pack = 10 PCS. Then 1 White Roll PCS = 800 tags and 1 Black Ribbon PCS = 4,000 tags.</div>
+   <div class="hint">Enter packs and any additional loose PCS separately. Total PCS = (White Roll packs × 27) + loose PCS, and (Black Ribbon packs × 10) + loose PCS. 1 White Roll PCS = 800 tags; 1 Black Ribbon PCS = 4,000 tags. Decimal quantities are supported.</div>
    <div class="actions"><button class="primary" type="submit">Save Receipt</button><button class="secondary" type="reset">Clear Form</button></div>
   </form>
  </section>
@@ -374,7 +376,7 @@ function render(){
 }
 function updatePreview(){const w=n('whitePacks')*27+n('whitePcs'),b=n('blackPacks')*10+n('blackPcs');$('issuePreview').innerHTML=`<strong>Calculated issue:</strong> White rolls: ${w} = ${(w*800).toLocaleString('en-IN')} tags &nbsp; | &nbsp; Black ribbons: ${b} = ${(b*4000).toLocaleString('en-IN')} tags &nbsp; | &nbsp; <strong>Total: ${Math.min(w*800,b*4000).toLocaleString('en-IN')} complete tags (limited by the lower material capacity)</strong>`}
 ['whitePacks','whitePcs','blackPacks','blackPcs'].forEach(id=>$(id).addEventListener('input',updatePreview));
-$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),white=whitePacks*27,black=blackPacks*10;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={date:$('receiptDate').value,white,black,whitePacks,blackPacks,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
+$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),whiteLoosePcs=n('receiptWhitePcs'),blackLoosePcs=n('receiptBlackPcs'),white=whitePacks*27+whiteLoosePcs,black=blackPacks*10+blackLoosePcs;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={date:$('receiptDate').value,white,black,whitePacks,blackPacks,whiteLoosePcs,blackLoosePcs,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
 $('issueForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const white=n('whitePacks')*27+n('whitePcs'),black=n('blackPacks')*10+n('blackPcs');if(!white&&!black){alert('Enter at least one issue quantity.');return}const rec={date:$('issueDate').value,mandi:$('mandiName').value.trim(),code:$('mandiCode').value.trim(),white,black,by:$('issuedBy').value.trim(),note:$('issueNote').value.trim()};if(editingIssueIndex!==null){db.issues[editingIssueIndex]=rec;editingIssueIndex=null}else{db.issues.push(rec)}save();e.target.reset();$('issueDate').value=today;const ib=$('issueForm').querySelector('[type="submit"]');if(ib)ib.textContent='Save Mandi Issue';updatePreview()});
 
 let editingIssueIndex = null;
@@ -470,8 +472,8 @@ function krblIssueToRow(r){
   };
 }
 function krblReceiptFromRow(r){
-  return {id:r.id,date:r.receipt_date,white:Number(r.white_roll_pcs||0),black:Number(r.black_ribbon_pcs||0),
-    whitePacks:Number(r.white_roll_packs||0),blackPacks:Number(r.black_ribbon_packs||0),ref:r.po_challan||'',note:r.remarks||''};
+  const white=Number(r.white_roll_pcs||0),black=Number(r.black_ribbon_pcs||0),whitePacks=Number(r.white_roll_packs||0),blackPacks=Number(r.black_ribbon_packs||0);
+  return {id:r.id,date:r.receipt_date,white,black,whitePacks,blackPacks,whiteLoosePcs:white-whitePacks*27,blackLoosePcs:black-blackPacks*10,ref:r.po_challan||'',note:r.remarks||''};
 }
 function krblIssueFromRow(r){
   return {id:r.id,date:r.issue_date,mandi:r.mandi_name||'',code:r.mandi_code||'',white:Number(r.white_roll_pcs||0),
