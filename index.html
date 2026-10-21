@@ -133,6 +133,9 @@ button.danger:hover{background:#a92720}
 #krblAuthCard input{width:100%;padding:12px;border:1px solid #d8c69f;border-radius:8px;margin:7px 0 12px;font:inherit}
 #krblAuthCard button{padding:11px 15px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer;margin:4px 5px 4px 0}
 #krblAuthCard button.secondary{background:#f7e3bd;color:#1b261c;border:1px solid #e4d2ad}
+#krblAuthCard button.link-button{background:transparent;color:#005332;text-decoration:underline;padding:7px 3px;box-shadow:none}
+#krblNewPassword,#krblSetNewPassword{display:none}
+#krblAuthCard .auth-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 #krblAuthMessage{font-size:13px;white-space:pre-wrap}
 #krblCloudStatus{position:fixed;right:12px;bottom:12px;z-index:1000;background:#004b2c;color:white;padding:8px 12px;border-radius:8px;font-size:12px;box-shadow:0 3px 12px #0002}
 body.krbl-viewer #page-receipt form,body.krbl-viewer #page-issue form,
@@ -149,9 +152,15 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
     <input id="krblEmail" type="email" autocomplete="username" placeholder="name@company.com">
     <label for="krblPassword">Password</label>
     <input id="krblPassword" type="password" autocomplete="current-password" placeholder="Password">
-    <button id="krblSignIn" type="button">Sign in</button>
-    <button id="krblSignUp" class="secondary" type="button">Create account</button>
-    <p id="krblAuthMessage">Use an account created for your KRBL team. New accounts are Viewer by default.</p>
+    <div class="auth-actions">
+      <button id="krblSignIn" type="button">Sign in</button>
+      <button id="krblSignUp" class="secondary" type="button">Create account</button>
+      <button id="krblForgotPassword" class="link-button" type="button">Forgot password?</button>
+    </div>
+    <label id="krblNewPasswordLabel" for="krblNewPassword" style="display:none">New password (minimum 8 characters)</label>
+    <input id="krblNewPassword" type="password" autocomplete="new-password" placeholder="Enter new password">
+    <button id="krblSetNewPassword" type="button">Set new password</button>
+    <p id="krblAuthMessage">Sign in with your team account or create a new account. New accounts are Viewer by default.</p>
   </div>
 </div>
 <div id="krblCloudStatus">Cloud: not connected</div>
@@ -179,6 +188,7 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <button type="button" data-page="receipt-history"><span>▣</span>Receipt History</button>
   <button type="button" data-page="stock"><span>▥</span>Stock & Calculation</button>
   <button type="button" data-page="backup"><span>◉</span>Backup & Restore</button>
+  <button type="button" id="krblLogoutBtn"><span>↪</span>Log out</button>
 </nav>
 <main>
 <div class="page-view active" id="page-dashboard">
@@ -528,9 +538,35 @@ async function krblSignUp(){
   if(!krblSupabase){krblAuthMessage('Please fill Supabase URL and publishable key in supabase-config.js, then reload.');return;}
   const email=document.getElementById('krblEmail').value.trim();
   const password=document.getElementById('krblPassword').value;
-  if(!email||password.length<8){krblAuthMessage('Enter your email and a password of at least 8 characters.');return;}
-  const {error}=await krblSupabase.auth.signUp({email,password});
-  krblAuthMessage(error?error.message:'Signup request submitted. Confirm your email if Supabase asks, then sign in. New accounts are Viewer by default.');
+  if(!email||password.length<8){krblAuthMessage('Enter your work email and a password of at least 8 characters.');return;}
+  const {data,error}=await krblSupabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+  krblAuthMessage(error?error.message:'Account request submitted. Check your email to confirm the account if confirmation is enabled. New accounts are Viewer by default.');
+}
+async function krblForgotPassword(){
+  if(!krblSupabase){krblAuthMessage('Cloud login is not configured. Please contact the system administrator.');return;}
+  const email=document.getElementById('krblEmail').value.trim();
+  if(!email){krblAuthMessage('Enter your work email first, then click Forgot password.');return;}
+  const {error}=await krblSupabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  krblAuthMessage(error?error.message:'If this email is registered, a password reset link has been sent. Please check your inbox and spam folder.');
+}
+async function krblSetNewPassword(){
+  if(!krblSupabase){krblAuthMessage('Cloud login is not configured.');return;}
+  const password=document.getElementById('krblNewPassword').value;
+  if(password.length<8){krblAuthMessage('Choose a password with at least 8 characters.');return;}
+  const {error}=await krblSupabase.auth.updateUser({password});
+  if(error){krblAuthMessage(error.message);return;}
+  document.getElementById('krblNewPassword').style.display='none';
+  document.getElementById('krblNewPasswordLabel').style.display='none';
+  document.getElementById('krblSetNewPassword').style.display='none';
+  document.getElementById('krblSignIn').style.display='inline-block';
+  document.getElementById('krblSignUp').style.display='inline-block';
+  document.getElementById('krblForgotPassword').style.display='inline-block';
+  krblAuthMessage('Password updated successfully. You can now continue using the dashboard.');
+}
+async function krblLogout(){
+  if(!krblSupabase)return;
+  const {error}=await krblSupabase.auth.signOut();
+  if(error)alert('Could not log out: '+error.message);
 }
 (function krblInitCloud(){
   const cfg=window.KRBL_SUPABASE_CONFIG||{};
@@ -541,11 +577,26 @@ async function krblSignUp(){
   krblSupabase=window.supabase.createClient(cfg.url,cfg.publishableKey);
   document.getElementById('krblSignIn').addEventListener('click',krblSignIn);
   document.getElementById('krblSignUp').addEventListener('click',krblSignUp);
+  document.getElementById('krblForgotPassword').addEventListener('click',krblForgotPassword);
+  document.getElementById('krblSetNewPassword').addEventListener('click',krblSetNewPassword);
+  document.getElementById('krblLogoutBtn').addEventListener('click',krblLogout);
   krblSupabase.auth.getSession().then(async ({data})=>{
     if(data.session){krblUser=data.session.user;try{await krblLoadCloud();krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));krblInitialIds.issues=new Set(db.issues.map(r=>r.id));}catch(e){krblAuthMessage('Cloud connection error: '+e.message);}}
   });
   krblSupabase.auth.onAuthStateChange((event,session)=>{
     if(event==='SIGNED_OUT'){location.reload();}
+    if(event==='PASSWORD_RECOVERY'){
+      const gate=document.getElementById('krblAuthGate'); if(gate)gate.style.display='flex';
+      document.getElementById('krblSignIn').style.display='none';
+      document.getElementById('krblSignUp').style.display='none';
+      document.getElementById('krblForgotPassword').style.display='none';
+      document.getElementById('krblPassword').style.display='none';
+      document.querySelector('label[for="krblPassword"]').style.display='none';
+      document.getElementById('krblNewPassword').style.display='block';
+      document.getElementById('krblNewPasswordLabel').style.display='block';
+      document.getElementById('krblSetNewPassword').style.display='inline-block';
+      krblAuthMessage('Enter your new password below.');
+    }
   });
 })();
 render();
