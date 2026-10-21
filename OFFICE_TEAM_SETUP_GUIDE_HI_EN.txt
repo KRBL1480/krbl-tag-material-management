@@ -1,0 +1,35 @@
+KRBL OFFICE / TEAM SETUP — NEXT STEPS
+=====================================
+
+IMPORTANT
+The GitHub commit adds database setup SQL, but it has NOT been executed in Supabase.
+Do not assume the Admin Panel or Team access is live yet.
+
+STEP 1 — BACKUP
+1. Open Supabase Dashboard for project sbshldtfvvuuluyeedtv.
+2. Export/backup the existing database before changing policies or tables.
+
+STEP 2 — REVIEW AND RUN DATABASE SETUP
+1. Open SQL Editor in Supabase.
+2. Open this repository file: OFFICE_TEAM_SETUP.sql
+3. Copy its complete SQL into SQL Editor and review it.
+4. Run it only after backup.
+5. If Supabase reports any error, stop and share the full error text/screenshot before trying changes.
+
+STEP 3 — CHECK ADMIN
+1. Confirm your own account is already created and confirmed.
+2. Run ADMIN_SETUP.sql separately after replacing EMAIL_HERE with your exact sign-in email.
+3. Verify the query updated one row. Do not promote all users to admin.
+
+STEP 4 — TEST
+1. Sign in with your admin account.
+2. Verify the existing receipts/issues still load.
+3. Verify new audit records appear in krbl_activity_log after a test receipt/issue insert, update and delete.
+4. Test using non-production test records first.
+
+IMPORTANT LIMITATIONS
+- The SQL creates profile and audit-log tables; it does not create Supabase Auth users by itself.
+- Secure user creation/invitations require a server-side Supabase Edge Function using a secret key stored only in server-side secrets. Never place the secret/service_role key in index.html or supabase-config.js.
+- Mandi-specific insert/update policies for krbl_mandi_issues are NOT yet enabled by this file. They must be designed and tested against the existing policies before Team users are allowed to write.
+- The login page and Admin UI are not yet changed/deployed by this SQL file.
+- Keep Row Level Security enabled.
