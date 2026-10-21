@@ -432,73 +432,7 @@ function downloadShareableReport(){
  const t=totals();
  const report=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KRBL Material Issue Report</title><style>
  body{font-family:Arial,sans-serif;margin:24px;color:#1c2c20;background:#fffdf7}header{padding:20px;background:#e5f4df;border-bottom:5px solid #e99a2d;text-align:center}h1,h2{color:#004b2c}h1{margin:0 0 8px}h2{margin-top:28px;border-bottom:2px solid #008044;padding-bottom:8px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.kpi{padding:14px;border:1px solid #c9dfbd;border-top:4px solid #008044;background:#f1f8ed;border-radius:8px;min-width:140px}.kpi b{display:block;font-size:22px;color:#004b2c;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}th{background:#006b3f;color:white}th,td{border:1px solid #d6dfcf;padding:8px;text-align:left}tbody tr:nth-child(even){background:#f2f8ed}.note{font-size:12px;color:#596658;margin-top:25px}@media print{body{margin:10mm}}</style></head><body><header><h1>KRBL LIMITED — MATERIAL ISSUE REPORT</h1><b>White Roll &amp; Black Ribbon • Mandi Tag Printing</b><p>Generated: ${new Date().toLocaleString()}</p></header><div class="kpis"><div class="kpi">White Roll Received<b>${t.whiteReceived} PCS</b></div><div class="kpi">Black Ribbon Received<b>${t.blackReceived} PCS</b></div><div class="kpi">White Roll Balance<b>${t.whiteBalance} PCS</b></div><div class="kpi">Black Ribbon Balance<b>${t.blackBalance} PCS</b></div><div class="kpi">Tags Issued<b>${(t.whiteIssued*800+t.blackIssued*4000).toLocaleString('en-IN')}</b></div></div><h2>Mandi-wise Issue History</h2><table><thead><tr><th>Issue Date</th><th>Mandi</th><th>Code</th><th>White Roll PCS</th><th>White Tags</th><th>Black Ribbon PCS</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th></tr></thead><tbody>${issueRows||'<tr><td colspan="10">No issue records yet.</td></tr>'}</tbody></table><h2>Material Receipt History</h2><table><thead><tr><th>Receipt Date</th><th>White Roll PCS</th><th>White Tag Capacity</th><th>Black Ribbon PCS</th><th>Ribbon Tag Capacity</th><th>PO / Challan</th><th>Remarks</th></tr></thead><tbody>${receiptRows||'<tr><td colspan="7">No receipt records yet.</td></tr>'}</tbody></table><p class="note">This is a shareable snapshot of the records at the time of export. For full data restoration, use the JSON backup from the register.</p>
-<script id="krblAdminPanelV1">
-(function(){
-  const style=document.createElement('style');
-  style.textContent=`
-    #krblAdminOpen{position:fixed;left:12px;bottom:12px;z-index:1001;background:#004b2c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;box-shadow:0 3px 12px #0002;display:none}
-    #krblAdminModal{position:fixed;inset:0;z-index:1002;background:#001b11aa;display:none;align-items:center;justify-content:center;padding:16px}
-    #krblAdminModal .panel{width:min(760px,100%);max-height:85vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
-    #krblAdminModal h2{color:#004b2c;margin:0 0 8px}
-    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%}
-    #krblAdminModal button{padding:9px 12px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer}
-    #krblAdminModal .secondary{background:#f7e3bd;color:#243328}
-    #krblAdminRoles{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
-    #krblAdminRoles th,#krblAdminRoles td{padding:8px;border-bottom:1px solid #eadfca;text-align:left;overflow-wrap:anywhere}
-    #krblAdminMsg{white-space:pre-wrap;font-size:13px;margin-top:10px}
-    body.krbl-viewer #krblAdminOpen{display:none!important}
-  `;
-  document.head.appendChild(style);
-  const btn=document.createElement('button');btn.id='krblAdminOpen';btn.type='button';btn.textContent='Admin Panel';
-  const modal=document.createElement('div');modal.id='krblAdminModal';modal.innerHTML=`
-    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <h2 id="krblAdminTitle">KRBL Admin Panel</h2><button type="button" class="secondary" id="krblAdminClose">Close</button>
-      </div>
-      <p id="krblAdminWho"></p>
-      <hr style="border:0;border-top:1px solid #eadfca">
-      <h3>Assign role to an existing account</h3>
-      <p style="font-size:13px">Enter the user's Supabase User UID from Authentication → Users. This changes the dashboard role only; it does not create an account or configure mandi-wise Team permissions.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <input id="krblAdminUid" placeholder="User UID" style="flex:1;min-width:240px">
-        <select id="krblAdminRole"><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
-        <button id="krblAdminSave" type="button">Save role</button>
-      </div>
-      <div id="krblAdminMsg" role="status"></div>
-      <h3 style="margin-top:20px">Current dashboard roles</h3>
-      <button id="krblAdminRefresh" type="button" class="secondary">Refresh list</button>
-      <div id="krblAdminList">Open Admin Panel to load roles.</div>
-    </div>`;
-  document.body.appendChild(btn);document.body.appendChild(modal);
-  const msg=(s)=>{document.getElementById('krblAdminMsg').textContent=s;};
-  async function loadRoles(){
-    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
-    const host=document.getElementById('krblAdminList');host.textContent='Loading…';
-    const res=await krblSupabase.from('krbl_user_roles').select('user_id,role,created_at').order('created_at',{ascending:false}).limit(200);
-    if(res.error){host.textContent='Could not load roles: '+res.error.message;return;}
-    if(!res.data.length){host.textContent='No role records found.';return;}
-    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>User UID</th><th>Role</th><th>Created</th></tr></thead><tbody>'+res.data.map(r=>'<tr><td>'+String(r.user_id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.role).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.created_at||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td></tr>').join('')+'</tbody></table>';
-  }
-  btn.addEventListener('click',async()=>{modal.style.display='flex';document.getElementById('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadRoles();});
-  document.getElementById('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
-  modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
-  document.getElementById('krblAdminRefresh').addEventListener('click',loadRoles);
-  document.getElementById('krblAdminSave').addEventListener('click',async()=>{
-    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
-    const uid=document.getElementById('krblAdminUid').value.trim();
-    const role=document.getElementById('krblAdminRole').value;
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase User UID.');return;}
-    if(uid===krblUser?.id && role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
-    msg('Saving…');
-    const res=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
-    if(res.error){msg('Save failed: '+res.error.message);return;}
-    msg('Role saved successfully.');document.getElementById('krblAdminUid').value='';await loadRoles();
-  });
-  const syncVisibility=()=>{btn.style.display=(krblCloudReady && krblRole==='admin')?'block':'none';};
-  const timer=setInterval(()=>{syncVisibility();if(krblCloudReady)clearInterval(timer);},500);
-  document.addEventListener('visibilitychange',syncVisibility);
-})();
-</script>
+
 
 </body></html>`;
  const blob=new Blob([report],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KRBL_Material_Issue_Report_'+today+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
@@ -695,4 +629,71 @@ render();
 })();
 </script>
 
+<script id="krblAdminPanelV1">
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    #krblAdminOpen{position:fixed;left:12px;bottom:12px;z-index:1001;background:#004b2c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;box-shadow:0 3px 12px #0002;display:none}
+    #krblAdminModal{position:fixed;inset:0;z-index:1002;background:#001b11aa;display:none;align-items:center;justify-content:center;padding:16px}
+    #krblAdminModal .panel{width:min(760px,100%);max-height:85vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
+    #krblAdminModal h2{color:#004b2c;margin:0 0 8px}
+    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%}
+    #krblAdminModal button{padding:9px 12px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer}
+    #krblAdminModal .secondary{background:#f7e3bd;color:#243328}
+    #krblAdminRoles{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+    #krblAdminRoles th,#krblAdminRoles td{padding:8px;border-bottom:1px solid #eadfca;text-align:left;overflow-wrap:anywhere}
+    #krblAdminMsg{white-space:pre-wrap;font-size:13px;margin-top:10px}
+    body.krbl-viewer #krblAdminOpen{display:none!important}
+  `;
+  document.head.appendChild(style);
+  const btn=document.createElement('button');btn.id='krblAdminOpen';btn.type='button';btn.textContent='Admin Panel';
+  const modal=document.createElement('div');modal.id='krblAdminModal';modal.innerHTML=`
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <h2 id="krblAdminTitle">KRBL Admin Panel</h2><button type="button" class="secondary" id="krblAdminClose">Close</button>
+      </div>
+      <p id="krblAdminWho"></p>
+      <hr style="border:0;border-top:1px solid #eadfca">
+      <h3>Assign role to an existing account</h3>
+      <p style="font-size:13px">Enter the user's Supabase User UID from Authentication → Users. This changes the dashboard role only; it does not create an account or configure mandi-wise Team permissions.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <input id="krblAdminUid" placeholder="User UID" style="flex:1;min-width:240px">
+        <select id="krblAdminRole"><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
+        <button id="krblAdminSave" type="button">Save role</button>
+      </div>
+      <div id="krblAdminMsg" role="status"></div>
+      <h3 style="margin-top:20px">Current dashboard roles</h3>
+      <button id="krblAdminRefresh" type="button" class="secondary">Refresh list</button>
+      <div id="krblAdminList">Open Admin Panel to load roles.</div>
+    </div>`;
+  document.body.appendChild(btn);document.body.appendChild(modal);
+  const msg=(s)=>{document.getElementById('krblAdminMsg').textContent=s;};
+  async function loadRoles(){
+    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
+    const host=document.getElementById('krblAdminList');host.textContent='Loading…';
+    const res=await krblSupabase.from('krbl_user_roles').select('user_id,role,created_at').order('created_at',{ascending:false}).limit(200);
+    if(res.error){host.textContent='Could not load roles: '+res.error.message;return;}
+    if(!res.data.length){host.textContent='No role records found.';return;}
+    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>User UID</th><th>Role</th><th>Created</th></tr></thead><tbody>'+res.data.map(r=>'<tr><td>'+String(r.user_id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.role).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.created_at||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td></tr>').join('')+'</tbody></table>';
+  }
+  btn.addEventListener('click',async()=>{modal.style.display='flex';document.getElementById('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadRoles();});
+  document.getElementById('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+  document.getElementById('krblAdminRefresh').addEventListener('click',loadRoles);
+  document.getElementById('krblAdminSave').addEventListener('click',async()=>{
+    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
+    const uid=document.getElementById('krblAdminUid').value.trim();
+    const role=document.getElementById('krblAdminRole').value;
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase User UID.');return;}
+    if(uid===krblUser?.id && role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
+    msg('Saving…');
+    const res=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
+    if(res.error){msg('Save failed: '+res.error.message);return;}
+    msg('Role saved successfully.');document.getElementById('krblAdminUid').value='';await loadRoles();
+  });
+  const syncVisibility=()=>{btn.style.display=(krblCloudReady && krblRole==='admin')?'block':'none';};
+  const timer=setInterval(()=>{syncVisibility();if(krblCloudReady)clearInterval(timer);},500);
+  document.addEventListener('visibilitychange',syncVisibility);
+})();
+</script>
 </body></html>
