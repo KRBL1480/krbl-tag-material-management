@@ -34,6 +34,19 @@ main{max-width:1500px;margin:20px auto;padding:0 20px}
 .stat span{display:block;color:#46513f;font-size:12px;font-weight:700}
 .stat small{display:block;margin-top:7px;font-size:11px;line-height:1.4;color:var(--muted)}
 .panel{margin-bottom:18px}
+.issue-summary-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+.issue-summary-controls label{margin:0}
+.issue-summary-controls select{min-width:220px;max-width:100%}
+.summary-note{font-size:12px;color:var(--muted)}
+.issue-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0 18px}
+.issue-summary-card{background:linear-gradient(135deg,#f3f9ed,#fffaf0);border:1px solid #d7e5cb;border-top:4px solid var(--green);border-radius:10px;padding:14px;min-width:0}
+.issue-summary-card h3{margin:0 0 8px;color:var(--green-dark);font-size:16px}
+.summary-mandi-name{font-size:12px;color:#596658;margin-bottom:10px;font-weight:700}
+.summary-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.summary-metric{background:#fffdf7;border:1px solid #eadfc8;border-radius:7px;padding:10px;min-width:0}
+.summary-metric span{display:block;font-size:11px;color:#596658;font-weight:700}
+.summary-metric strong{display:block;font-size:19px;color:var(--green-dark);margin-top:4px;overflow-wrap:anywhere}
+@media(max-width:650px){.issue-summary-grid{grid-template-columns:1fr}.summary-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .panel h2{font-size:19px;margin:0 0 17px;color:var(--green-dark);display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #ead9b7}
 .panel h2:before{content:"";display:inline-block;width:7px;height:23px;border-radius:3px;background:linear-gradient(180deg,var(--green),var(--orange))}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
@@ -238,7 +251,12 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
 <div class="page-heading"><span>Issue History</span><small>KRBL DIGITAL SYSTEM</small></div>
 <section class="panel">
   <h2>4. Mandi-wise Issue History</h2>
-  <div class="filters no-print"><input id="search" placeholder="Search mandi name or code"><input id="fromDate" type="date" aria-label="From date"><input id="toDate" type="date" aria-label="To date"><button class="secondary" id="clearFilters" type="button">Clear Filters</button></div>
+  <div class="filters no-print"><input id="search" placeholder="Search mandi name or code"><select id="issueYear" aria-label="Filter by year"><option value="">All Years</option></select><input id="fromDate" type="date" aria-label="From date"><input id="toDate" type="date" aria-label="To date"><button class="secondary" id="clearFilters" type="button">Clear Filters</button></div>
+  <div class="issue-summary-controls no-print"><label for="summaryMandi">Selected Mandi Summary</label><select id="summaryMandi"><option value="">Select a mandi</option></select><span class="summary-note">Year and date filters above apply to both summaries.</span></div>
+  <div class="issue-summary-grid" aria-live="polite">
+   <section class="issue-summary-card"><h3>Selected Mandi Summary</h3><div id="selectedMandiName" class="summary-mandi-name">Select a mandi above</div><div class="summary-metrics" id="selectedMandiSummary"></div></section>
+   <section class="issue-summary-card"><h3>All Mandis Combined Summary</h3><div class="summary-mandi-name">All mandis matching current year/date filters</div><div class="summary-metrics" id="allMandisSummary"></div></section>
+  </div>
   <div class="tablewrap"><table><thead><tr><th>Issue Date</th><th>Mandi Name</th><th>Code</th><th>White Roll Issue</th><th>White Tags</th><th>Black Ribbon Issue</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody id="issueRows"></tbody></table></div>
   <div class="actions no-print"><button class="secondary" id="exportIssues" type="button">Export Issue History CSV</button><button class="secondary" id="exportAll" type="button">Export All Records CSV</button><button class="secondary" type="button" onclick="window.print()">Print Report</button><button class="primary" id="downloadReport" type="button">Download Shareable HTML Report</button><button class="danger" id="clearHistory" type="button">Clear All Saved Data</button></div>
  </section>
@@ -321,12 +339,26 @@ function totals(){
  $('allBalanceTags').textContent=fmt(wrBal*800)+' tags remaining (White Roll balance)';
  $('summaryRows').innerHTML=`<tr><td><strong>White Roll</strong></td><td>${fmt(wrRec)} rolls</td><td>${fmt(wrRecTags)} tags</td><td>${fmt(wrOut)} rolls</td><td>${fmt(wrOutTags)} tags</td><td>${fmt(wrBal)} rolls</td><td>${fmt(wrBal*800)} tags</td></tr><tr><td><strong>Black Ribbon</strong></td><td>${fmt(brRec)} ribbons</td><td>${fmt(brRecTags)} tags capacity</td><td>${fmt(brOut)} ribbons</td><td>${fmt(brOutTags)} tags capacity</td><td>${fmt(brBal)} ribbons</td><td>${fmt(brBal*4000)} tags capacity</td></tr>`;
 }
-function filteredIssues(){const q=$('search').value.toLowerCase(),f=$('fromDate').value,t=$('toDate').value;
- return db.issues.map((r,i)=>({...r,_i:i})).filter(r=>(!q||(r.mandi.toLowerCase().includes(q)||r.code.toLowerCase().includes(q)))&&(!f||r.date>=f)&&(!t||r.date<=t)).sort((a,b)=>b.date.localeCompare(a.date))}
+function filteredIssues(){const q=$('search').value.toLowerCase(),f=$('fromDate').value,t=$('toDate').value,y=$('issueYear').value;
+ return db.issues.map((r,i)=>({...r,_i:i})).filter(r=>(!q||(String(r.mandi||'').toLowerCase().includes(q)||String(r.code||'').toLowerCase().includes(q)))&&(!f||r.date>=f)&&(!t||r.date<=t)&&(!y||String(r.date||'').slice(0,4)===y)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))}
+function issueSummary(list){return list.reduce((a,r)=>{const w=Number(r.white)||0,b=Number(r.black)||0;a.whitePcs+=w;a.whiteTags+=w*800;a.blackPcs+=b;a.ribbonTags+=b*4000;a.totalTags+=Math.min(w*800,b*4000);return a},{whitePcs:0,whiteTags:0,blackPcs:0,ribbonTags:0,totalTags:0})}
+function summaryMarkup(s){const fmt=v=>Number(v||0).toLocaleString('en-IN');return `<div class="summary-metric"><span>White Roll (PCS)</span><strong>${fmt(s.whitePcs)}</strong></div><div class="summary-metric"><span>White Tags</span><strong>${fmt(s.whiteTags)}</strong></div><div class="summary-metric"><span>Black Ribbon (PCS)</span><strong>${fmt(s.blackPcs)}</strong></div><div class="summary-metric"><span>Black Ribbon Tags</span><strong>${fmt(s.ribbonTags)}</strong></div><div class="summary-metric"><span>Total Complete Tags*</span><strong>${fmt(s.totalTags)}</strong></div>`}
+function updateIssueSummary(rows){
+ const yearSelect=$('issueYear'),currentYear=yearSelect.value;
+ const years=[...new Set(db.issues.map(r=>String(r.date||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse();
+ yearSelect.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');yearSelect.value=years.includes(currentYear)?currentYear:'';
+ const mandiSelect=$('summaryMandi'),selected=mandiSelect.value;
+ const mandis=[...new Map(db.issues.map(r=>[String(r.code||'')+'|'+String(r.mandi||''),{key:String(r.code||'')+'|'+String(r.mandi||''),label:(r.mandi||'Unnamed Mandi')+(r.code?' ('+r.code+')':'' )}])).values()].sort((a,b)=>a.label.localeCompare(b.label));
+ mandiSelect.innerHTML='<option value="">Select a mandi</option>'+mandis.map(m=>`<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('');mandiSelect.value=mandis.some(m=>m.key===selected)?selected:'';
+ const chosen=mandiSelect.value;const selectedRows=chosen?rows.filter(r=>String(r.code||'')+'|'+String(r.mandi||'')===chosen):[];
+ $('selectedMandiName').textContent=chosen?(mandis.find(m=>m.key===chosen)?.label||'Selected Mandi'):'Select a mandi above';
+ $('selectedMandiSummary').innerHTML=summaryMarkup(issueSummary(selectedRows));$('allMandisSummary').innerHTML=summaryMarkup(issueSummary(rows));
+}
 function render(){
  totals();
  const rows=filteredIssues();
- $('issueRows').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.mandi)}</td><td><strong>${esc(r.code)}</strong></td><td>${r.white} PCS</td><td class="num">${(r.white*800).toLocaleString('en-IN')}</td><td>${r.black} PCS</td><td class="num">${(r.black*4000).toLocaleString('en-IN')}</td><td class="num"><strong>${(r.white*800).toLocaleString('en-IN')}</strong></td><td>${esc(r.by||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons"><button class="secondary small" onclick="editIssue(${r._i})">Edit</button><button class="danger small" onclick="deleteIssue(${r._i})">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" class="empty">No issue records yet.</td></tr>';
+ updateIssueSummary(rows);
+ $('issueRows').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.mandi)}</td><td><strong>${esc(r.code)}</strong></td><td>${r.white} PCS</td><td class="num">${(r.white*800).toLocaleString('en-IN')}</td><td>${r.black} PCS</td><td class="num">${(r.black*4000).toLocaleString('en-IN')}</td><td class="num"><strong>${Math.min(r.white*800,r.black*4000).toLocaleString('en-IN')}</strong></td><td>${esc(r.by||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons"><button class="secondary small" onclick="editIssue(${r._i})">Edit</button><button class="danger small" onclick="deleteIssue(${r._i})">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" class="empty">No issue records yet.</td></tr>';
  $('receiptRows').innerHTML=db.receipts.length?db.receipts.map((r,i)=>`<tr><td>${esc(r.date)}</td><td>${r.white}</td><td>${r.black}</td><td>${esc(r.ref||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons"><button class="secondary small" onclick="editReceipt(${i})">Edit</button><button class="danger small" onclick="deleteReceipt(${i})">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No receipt records yet.</td></tr>';
  updatePreview();
 }
@@ -372,8 +404,9 @@ function editReceipt(i){
 function deleteIssue(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this issue record?')){db.issues.splice(i,1);save()}}
 function deleteReceipt(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this receipt record?')){db.receipts.splice(i,1);save()}}
 window.editIssue=editIssue;window.editReceipt=editReceipt;window.deleteIssue=deleteIssue;window.deleteReceipt=deleteReceipt;
-['search','fromDate','toDate'].forEach(id=>$(id).addEventListener('input',render));
-$('clearFilters').onclick=()=>{$('search').value='';$('fromDate').value='';$('toDate').value='';render()};
+['search','fromDate','toDate','issueYear'].forEach(id=>$(id).addEventListener('input',render));
+$('summaryMandi').addEventListener('change',render);
+$('clearFilters').onclick=()=>{$('search').value='';$('fromDate').value='';$('toDate').value='';$('issueYear').value='';render()};
 function csvDownload(filename,rows){const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 const issueHeaders=['Issue Date','Mandi Name','Mandi Code','White Roll PCS','White Tags','Black Ribbon PCS','Ribbon Tags','Total Tags','Issued By','Remarks'];
 function issueCsv(list){return [issueHeaders,...list.map(r=>[r.date,r.mandi,r.code,r.white,r.white*800,r.black,r.black*4000,Math.min(r.white*800,r.black*4000),r.by,r.note])]}
