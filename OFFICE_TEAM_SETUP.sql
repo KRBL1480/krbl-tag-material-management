@@ -4,6 +4,9 @@ create table if not exists public.krbl_team_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
   employee_id text unique,
+  email text,
+  role text not null default 'viewer' check (role in ('admin','viewer','office','team')),
+  assigned_mandis jsonb not null default '[]'::jsonb,
   department text,
   area text not null default 'team' check (area in ('office','team')),
   mandi_code text,
@@ -11,6 +14,11 @@ create table if not exists public.krbl_team_profiles (
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- Safe upgrades for projects where the profile table already exists.
+alter table public.krbl_team_profiles add column if not exists email text;
+alter table public.krbl_team_profiles add column if not exists role text not null default 'viewer';
+alter table public.krbl_team_profiles add column if not exists assigned_mandis jsonb not null default '[]'::jsonb;
 create table if not exists public.krbl_activity_log (
   id bigint generated always as identity primary key,
   actor_id uuid references auth.users(id) on delete set null,
