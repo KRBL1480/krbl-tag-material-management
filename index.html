@@ -726,10 +726,11 @@ render();
   el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
   el('krblAdminSave').addEventListener('click',async()=>{
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
-    const uid=el('krblAdminUid').value.trim(), name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
+    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
+    const uid=(el('krblAdminUid').value.trim() || ((email && krblUser?.email && email.toLowerCase()===krblUser.email.toLowerCase()) ? krblUser.id : ''));
     const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
     const selectedMandis=getSelectedMandis();
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase UID for the existing account.');return;}
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('This email is not the currently signed-in account. To register another employee, first create/invite their Supabase Auth account; then connect it through the secure invitation workflow.');return;}
     if(!name){msg('Enter employee name.');return;}
     if(!email||!/^\S+@\S+\.\S+$/.test(email)){msg('Enter a valid email address.');return;}
     if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
