@@ -629,69 +629,89 @@ render();
 })();
 </script>
 
-<script id="krblAdminPanelV1">
+<script id="krblAdminPanelV2">
 (function(){
   const style=document.createElement('style');
   style.textContent=`
     #krblAdminOpen{position:fixed;left:12px;bottom:12px;z-index:1001;background:#004b2c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;box-shadow:0 3px 12px #0002;display:none}
     #krblAdminModal{position:fixed;inset:0;z-index:1002;background:#001b11aa;display:none;align-items:center;justify-content:center;padding:16px}
-    #krblAdminModal .panel{width:min(760px,100%);max-height:85vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
+    #krblAdminModal .panel{width:min(900px,100%);max-height:88vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
     #krblAdminModal h2{color:#004b2c;margin:0 0 8px}
-    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%}
+    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%;box-sizing:border-box;width:100%}
     #krblAdminModal button{padding:9px 12px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer}
     #krblAdminModal .secondary{background:#f7e3bd;color:#243328}
     #krblAdminRoles{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
     #krblAdminRoles th,#krblAdminRoles td{padding:8px;border-bottom:1px solid #eadfca;text-align:left;overflow-wrap:anywhere}
+    #krblAdminRoles th{background:#006b3f;color:white}
     #krblAdminMsg{white-space:pre-wrap;font-size:13px;margin-top:10px}
+    #krblAdminModal .adminGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    #krblAdminModal .adminField{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
+    #krblAdminModal .adminWide{grid-column:1/-1}
     body.krbl-viewer #krblAdminOpen{display:none!important}
+    @media(max-width:600px){#krblAdminModal .adminGrid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
-  const btn=document.createElement('button');btn.id='krblAdminOpen';btn.type='button';btn.textContent='Admin Panel';
+  const btn=document.createElement('button');btn.id='krblAdminOpen';btn.type='button';btn.textContent='User Management';
   const modal=document.createElement('div');modal.id='krblAdminModal';modal.innerHTML=`
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <h2 id="krblAdminTitle">KRBL Admin Panel</h2><button type="button" class="secondary" id="krblAdminClose">Close</button>
-      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="krblAdminTitle">KRBL User Management</h2><button type="button" class="secondary" id="krblAdminClose">Close</button></div>
       <p id="krblAdminWho"></p>
-      <hr style="border:0;border-top:1px solid #eadfca">
-      <h3>Assign role to an existing account</h3>
-      <p style="font-size:13px">Enter the user's Supabase User UID from Authentication → Users. This changes the dashboard role only; it does not create an account or configure mandi-wise Team permissions.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <input id="krblAdminUid" placeholder="User UID" style="flex:1;min-width:240px">
-        <select id="krblAdminRole"><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
-        <button id="krblAdminSave" type="button">Save role</button>
+      <div class="notice" style="margin:12px 0">Employee name, employee ID and email will be shown in the list. The Supabase UID remains the internal account key. This panel manages existing accounts; it does not invite/create login accounts yet.</div>
+      <h3>Register / update employee profile</h3>
+      <div class="adminGrid">
+        <label class="adminField">Supabase UID (account link)<input id="krblAdminUid" placeholder="Paste UID only when linking an existing account"></label>
+        <label class="adminField">Employee name<input id="krblAdminName" placeholder="e.g. Rajesh Kumar"></label>
+        <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
+        <label class="adminField">Email address<input id="krblAdminEmail" type="email" placeholder="name@company.com"></label>
+        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label>
+        <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
+        <label class="adminField">Assigned mandi code(s)<input id="krblAdminMandiCodes" placeholder="D019, H061 (comma-separated)"></label>
+        <label class="adminField">Assigned mandi name(s)<input id="krblAdminMandiNames" placeholder="Narela, Gohana (comma-separated)"></label>
+        <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
+        <div class="adminField" style="justify-content:end"><button id="krblAdminSave" type="button">Save employee profile + role</button></div>
       </div>
       <div id="krblAdminMsg" role="status"></div>
-      <h3 style="margin-top:20px">Current dashboard roles</h3>
+      <h3 style="margin-top:22px">Registered employees</h3>
       <button id="krblAdminRefresh" type="button" class="secondary">Refresh list</button>
-      <div id="krblAdminList">Open Admin Panel to load roles.</div>
+      <div id="krblAdminList">Click Refresh list to load employee profiles.</div>
     </div>`;
   document.body.appendChild(btn);document.body.appendChild(modal);
-  const msg=(s)=>{document.getElementById('krblAdminMsg').textContent=s;};
-  async function loadRoles(){
-    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
-    const host=document.getElementById('krblAdminList');host.textContent='Loading…';
-    const res=await krblSupabase.from('krbl_user_roles').select('user_id,role,created_at').order('created_at',{ascending:false}).limit(200);
-    if(res.error){host.textContent='Could not load roles: '+res.error.message;return;}
-    if(!res.data.length){host.textContent='No role records found.';return;}
-    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>User UID</th><th>Role</th><th>Created</th></tr></thead><tbody>'+res.data.map(r=>'<tr><td>'+String(r.user_id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.role).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.created_at||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td></tr>').join('')+'</tbody></table>';
+  const el=id=>document.getElementById(id);
+  const msg=s=>{el('krblAdminMsg').textContent=s;};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function loadProfiles(){
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const host=el('krblAdminList');host.textContent='Loading employee profiles…';
+    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,email,department,area,mandi_code,mandi_name,assigned_mandis,active,created_at').order('full_name',{ascending:true}).limit(300);
+    if(res.error){host.textContent='Profile table is not ready yet. Run the updated OFFICE_TEAM_SETUP.sql in Supabase, then refresh. Details: '+res.error.message;return;}
+    if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
+    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Email</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'<div style="font-size:10px;color:#777">UID: '+esc(p.user_id)+'</div></td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button></td></tr>').join('')+'</tbody></table>';
+    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminEmail').value=p.email||'';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';el('krblAdminMandiCodes').value=(p.assigned_mandis||[]).map(x=>x.code||'').filter(Boolean).join(', ')||p.mandi_code||'';el('krblAdminMandiNames').value=(p.assigned_mandis||[]).map(x=>x.name||'').filter(Boolean).join(', ')||p.mandi_name||'';el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
   }
-  btn.addEventListener('click',async()=>{modal.style.display='flex';document.getElementById('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadRoles();});
-  document.getElementById('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
+  btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
+  el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
   modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
-  document.getElementById('krblAdminRefresh').addEventListener('click',loadRoles);
-  document.getElementById('krblAdminSave').addEventListener('click',async()=>{
-    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
-    const uid=document.getElementById('krblAdminUid').value.trim();
-    const role=document.getElementById('krblAdminRole').value;
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase User UID.');return;}
-    if(uid===krblUser?.id && role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
-    msg('Saving…');
-    const res=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
-    if(res.error){msg('Save failed: '+res.error.message);return;}
-    msg('Role saved successfully.');document.getElementById('krblAdminUid').value='';await loadRoles();
+  el('krblAdminRefresh').addEventListener('click',loadProfiles);
+  el('krblAdminSave').addEventListener('click',async()=>{
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const uid=el('krblAdminUid').value.trim(), name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
+    const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
+    const codes=el('krblAdminMandiCodes').value.split(',').map(x=>x.trim()).filter(Boolean), names=el('krblAdminMandiNames').value.split(',').map(x=>x.trim()).filter(Boolean);
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase UID for the existing account.');return;}
+    if(!name){msg('Enter employee name.');return;}
+    if(!email||!/^\S+@\S+\.\S+$/.test(email)){msg('Enter a valid email address.');return;}
+    if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
+    const assigned_mandis=codes.map((code,i)=>({code,name:names[i]||codes[i]}));
+    msg('Saving employee profile…');
+    const profile={user_id:uid,full_name:name,employee_id:empId||null,email,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
+    const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
+    if(pr.error){msg('Profile save failed: '+pr.error.message+' — ensure the updated SQL setup has been run in Supabase.');return;}
+    const rr=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
+    if(rr.error){msg('Profile saved, but role update failed: '+rr.error.message);return;}
+    msg('Employee profile and role saved. Note: Office/Team permissions still require database policy setup before they can safely edit records.');
+    await loadProfiles();
   });
-  const syncVisibility=()=>{btn.style.display=(krblCloudReady && krblRole==='admin')?'block':'none';};
+  const syncVisibility=()=>{btn.style.display=(krblCloudReady&&krblRole==='admin')?'block':'none';};
   const timer=setInterval(()=>{syncVisibility();if(krblCloudReady)clearInterval(timer);},500);
   document.addEventListener('visibilitychange',syncVisibility);
 })();
