@@ -210,12 +210,12 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <form id="receiptForm">
    <div class="grid">
     <div><label for="receiptDate">Receipt Date *</label><input type="date" id="receiptDate" required></div>
-    <div><label for="receiptWhite">White Roll Received (packs; 1 pack = 27 PCS)</label><input type="number" id="receiptWhite" min="0" step="1" value="0"></div>
-    <div><label for="receiptBlack">Black Ribbon Received (packs; 1 pack = 10 PCS)</label><input type="number" id="receiptBlack" min="0" step="1" value="0"></div>
+    <div><label for="receiptWhite">White Roll Received (packs; 1 pack = 27 PCS)</label><input type="number" id="receiptWhite" min="0" step="any" value="0"></div>
+    <div><label for="receiptBlack">Black Ribbon Received (packs; 1 pack = 10 PCS)</label><input type="number" id="receiptBlack" min="0" step="any" value="0"></div>
     <div><label for="receiptRef">PO / Challan / Reference</label><input id="receiptRef" placeholder="Enter reference number"></div>
     <div class="full"><label for="receiptNote">Remarks</label><input id="receiptNote" placeholder="Supplier, pending quantity, etc."></div>
    </div>
-   <div class="hint">Pack conversion: 1 White Roll pack = 27 PCS; 1 Black Ribbon pack = 10 PCS. Then 1 White Roll PCS = 800 tags and 1 Black Ribbon PCS = 4,000 tags.</div>
+   <div class="hint">Decimal quantities are supported (for example, 14.5, 15.3, 12.75). Pack conversion: 1 White Roll pack = 27 PCS; 1 Black Ribbon pack = 10 PCS. Then 1 White Roll PCS = 800 tags and 1 Black Ribbon PCS = 4,000 tags.</div>
    <div class="actions"><button class="primary" type="submit">Save Receipt</button><button class="secondary" type="reset">Clear Form</button></div>
   </form>
  </section>
@@ -230,13 +230,13 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
     <div><label for="mandiName">Mandi Name *</label><input id="mandiName" required placeholder="e.g. Narela"></div>
     <div><label for="mandiCode">Mandi Code *</label><input id="mandiCode" required placeholder="e.g. D019"></div>
     <div><label for="issuedBy">Issued By</label><input id="issuedBy" placeholder="Employee name"></div>
-    <div><label for="whitePacks">White Roll Issue (packs)</label><input type="number" id="whitePacks" min="0" step="1" value="0"></div>
-    <div><label for="whitePcs">White Roll Issue (loose rolls/pcs)</label><input type="number" id="whitePcs" min="0" step="1" value="0"><p class="hint">1 roll = 800 tags</p></div>
-    <div><label for="blackPacks">Black Ribbon Issue (packs)</label><input type="number" id="blackPacks" min="0" step="1" value="0"></div>
-    <div><label for="blackPcs">Black Ribbon Issue (loose pcs)</label><input type="number" id="blackPcs" min="0" step="1" value="0"><p class="hint">1 ribbon = 4,000 tags</p></div>
+    <div><label for="whitePacks">White Roll Issue (packs)</label><input type="number" id="whitePacks" min="0" step="any" value="0"></div>
+    <div><label for="whitePcs">White Roll Issue (loose rolls/pcs)</label><input type="number" id="whitePcs" min="0" step="any" value="0"><p class="hint">1 roll = 800 tags</p></div>
+    <div><label for="blackPacks">Black Ribbon Issue (packs)</label><input type="number" id="blackPacks" min="0" step="any" value="0"></div>
+    <div><label for="blackPcs">Black Ribbon Issue (loose pcs)</label><input type="number" id="blackPcs" min="0" step="any" value="0"><p class="hint">1 ribbon = 4,000 tags</p></div>
     <div class="full"><label for="issueNote">Remarks</label><input id="issueNote" placeholder="Purpose, transporter, acknowledgement, etc."></div>
    </div>
-   <div class="notice" id="issuePreview">Issue calculation will appear here.</div>
+   <div class="notice" id="issuePreview">Decimal quantities are supported (e.g. 14.5, 15.3, 12.75). Issue calculation will appear here.</div>
    <div class="actions"><button class="primary" type="submit">Save Mandi Issue</button><button class="secondary" type="reset">Clear Form</button></div>
   </form>
  </section>
