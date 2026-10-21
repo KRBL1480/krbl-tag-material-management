@@ -472,30 +472,30 @@ function downloadShareableReport(){
   document.body.appendChild(btn);document.body.appendChild(modal);
   const msg=(s)=>{document.getElementById('krblAdminMsg').textContent=s;};
   async function loadRoles(){
-    if(!window.krblSupabase || window.krblRole!=='admin'){msg('Admin permission required.');return;}
+    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
     const host=document.getElementById('krblAdminList');host.textContent='Loading…';
-    const res=await window.krblSupabase.from('krbl_user_roles').select('user_id,role,created_at').order('created_at',{ascending:false}).limit(200);
+    const res=await krblSupabase.from('krbl_user_roles').select('user_id,role,created_at').order('created_at',{ascending:false}).limit(200);
     if(res.error){host.textContent='Could not load roles: '+res.error.message;return;}
     if(!res.data.length){host.textContent='No role records found.';return;}
     host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>User UID</th><th>Role</th><th>Created</th></tr></thead><tbody>'+res.data.map(r=>'<tr><td>'+String(r.user_id).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.role).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+String(r.created_at||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td></tr>').join('')+'</tbody></table>';
   }
-  btn.addEventListener('click',async()=>{modal.style.display='flex';document.getElementById('krblAdminWho').textContent='Signed in: '+(window.krblUser?.email||'current user')+' • Role: '+(window.krblRole||'unknown');await loadRoles();});
+  btn.addEventListener('click',async()=>{modal.style.display='flex';document.getElementById('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadRoles();});
   document.getElementById('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
   modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
   document.getElementById('krblAdminRefresh').addEventListener('click',loadRoles);
   document.getElementById('krblAdminSave').addEventListener('click',async()=>{
-    if(!window.krblSupabase || window.krblRole!=='admin'){msg('Admin permission required.');return;}
+    if(!krblSupabase || krblRole!=='admin'){msg('Admin permission required.');return;}
     const uid=document.getElementById('krblAdminUid').value.trim();
     const role=document.getElementById('krblAdminRole').value;
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase User UID.');return;}
-    if(uid===window.krblUser?.id && role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
+    if(uid===krblUser?.id && role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
     msg('Saving…');
-    const res=await window.krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
+    const res=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
     if(res.error){msg('Save failed: '+res.error.message);return;}
     msg('Role saved successfully.');document.getElementById('krblAdminUid').value='';await loadRoles();
   });
-  const syncVisibility=()=>{btn.style.display=(window.krblCloudReady && window.krblRole==='admin')?'block':'none';};
-  const timer=setInterval(()=>{syncVisibility();if(window.krblCloudReady)clearInterval(timer);},500);
+  const syncVisibility=()=>{btn.style.display=(krblCloudReady && krblRole==='admin')?'block':'none';};
+  const timer=setInterval(()=>{syncVisibility();if(krblCloudReady)clearInterval(timer);},500);
   document.addEventListener('visibilitychange',syncVisibility);
 })();
 </script>
