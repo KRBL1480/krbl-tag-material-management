@@ -666,10 +666,14 @@ render();
         <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select></label>
         <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
         <label class="adminField adminWide">Assigned mandis — scroll and select one or more
-          <select id="krblAdminMandis" multiple size="7" style="min-height:150px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="krblSelectAllMandis" type="button" class="secondary">Select All Mandis</button>
+            <button id="krblClearMandis" type="button" class="secondary">Clear Selection</button>
+          </div>
+          <select id="krblAdminMandis" multiple size="10" style="min-height:220px">
             <option disabled>Loading mandi list…</option>
           </select>
-          <span style="font-weight:400;color:#596658">Tip: hold Ctrl (Windows) or Cmd (Mac) to select multiple mandis. The list combines saved mandi records and the common mandi list.</span>
+          <span style="font-weight:400;color:#596658">Select All Mandis assigns every mandi currently listed. You can also select individual mandis with Ctrl-click.</span>
         </label>
         <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
         <div class="adminField" style="justify-content:end"><button id="krblAdminSave" type="button">Save employee profile + role</button></div>
@@ -684,7 +688,7 @@ render();
   const msg=s=>{el('krblAdminMsg').textContent=s;};
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const knownMandis=[
-    ['D019','Narela'],['D006','Najafgarh'],['H061','Gohana'],['H087','Jiwan Nagar'],['H018','Jiwan Nagar'],['H072','Sirsa'],['H088','Sonepat'],['H029','Narnaund'],['','Rohtak'],['','Barwala'],['','Narela'],['','Sonepat'],['','Gohana'],['','Sirsa'],['','Jiwan Nagar']
+    ['D019','Narela'],['D006','Najafgarh'],['H061','Gohana'],['H087','Jiwan Nagar'],['H018','Jiwan Nagar'],['H072','Sirsa'],['H088','Sonepat'],['H029','Narnaund'],['','Rohtak'],['','Barwala']
   ];
   const mandiKey=(code,name)=>String(code||'').trim().toUpperCase()+'|'+String(name||'').trim();
   async function loadMandiOptions(selected=[]){
@@ -695,7 +699,11 @@ render();
       const res=await krblSupabase.from('krbl_mandi_issues').select('mandi_code,mandi_name').limit(5000);
       if(!res.error)(res.data||[]).forEach(r=>{if(r.mandi_name||r.mandi_code){const key=mandiKey(r.mandi_code,r.mandi_name);found.set(key,{code:r.mandi_code||'',name:r.mandi_name||r.mandi_code||'Unnamed Mandi'});}});
     }
-    const sorted=[...found.entries()].sort((a,b)=>(a[1].name+' '+a[1].code).localeCompare(b[1].name+' '+b[1].code));
+    // Remove name-only fallback duplicates whenever the same mandi name has a coded record.
+    const all=[...found.entries()];
+    const codedNames=new Set(all.filter(([,m])=>m.code).map(([,m])=>String(m.name||'').trim().toLowerCase()));
+    const filtered=all.filter(([,m])=>m.code||!codedNames.has(String(m.name||'').trim().toLowerCase()));
+    const sorted=filtered.sort((a,b)=>(a[1].name+' '+a[1].code).localeCompare(b[1].name+' '+b[1].code));
     select.innerHTML=sorted.map(([key,m])=>'<option value="'+esc(key)+'">'+esc(m.name+(m.code?' ('+m.code+')':''))+'</option>').join('');
     const selectedKeys=new Set(selected.map(m=>mandiKey(m.code,m.name)));
     [...select.options].forEach(o=>o.selected=selectedKeys.has(o.value));
@@ -714,6 +722,8 @@ render();
   el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
   modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
   el('krblAdminRefresh').addEventListener('click',loadProfiles);
+  el('krblSelectAllMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=true);msg('All '+el('krblAdminMandis').options.length+' listed mandis selected. Save the employee profile to apply this assignment.');});
+  el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
   el('krblAdminSave').addEventListener('click',async()=>{
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const uid=el('krblAdminUid').value.trim(), name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
