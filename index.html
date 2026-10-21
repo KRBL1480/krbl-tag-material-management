@@ -663,7 +663,7 @@ render();
         <label class="adminField">Employee name<input id="krblAdminName" placeholder="e.g. Rajesh Kumar"></label>
         <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
         <label class="adminField">Email address<input id="krblAdminEmail" type="email" placeholder="name@company.com"></label>
-        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label>
+        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select></label>
         <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
         <label class="adminField">Assigned mandi code(s)<input id="krblAdminMandiCodes" placeholder="D019, H061 (comma-separated)"></label>
         <label class="adminField">Assigned mandi name(s)<input id="krblAdminMandiNames" placeholder="Narela, Gohana (comma-separated)"></label>
@@ -700,7 +700,7 @@ render();
     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Please enter a valid Supabase UID for the existing account.');return;}
     if(!name){msg('Enter employee name.');return;}
     if(!email||!/^\S+@\S+\.\S+$/.test(email)){msg('Enter a valid email address.');return;}
-    if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Admin role here.');return;}
+    if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
     const assigned_mandis=codes.map((code,i)=>({code,name:names[i]||codes[i]}));
     msg('Saving employee profile…');
     const profile={user_id:uid,full_name:name,employee_id:empId||null,email,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
