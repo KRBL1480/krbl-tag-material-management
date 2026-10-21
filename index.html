@@ -659,7 +659,7 @@ render();
       <div class="notice" style="margin:12px 0">Employee name, employee ID and email will be shown in the list. The Supabase UID remains the internal account key. This panel manages existing accounts; it does not invite/create login accounts yet.</div>
       <h3>Register / update employee profile</h3>
       <div class="adminGrid">
-        <label class="adminField">Supabase UID (account link)<input id="krblAdminUid" placeholder="Paste UID only when linking an existing account"></label>
+        <input id="krblAdminUid" type="hidden" value="">
         <label class="adminField">Employee name<input id="krblAdminName" placeholder="e.g. Rajesh Kumar"></label>
         <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
         <label class="adminField">Email address<input id="krblAdminEmail" type="email" placeholder="name@company.com"></label>
