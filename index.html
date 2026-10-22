@@ -657,6 +657,23 @@ render();
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="krblAdminTitle">KRBL User Management</h2><button type="button" class="secondary" id="krblAdminClose">Close</button></div>
       <p id="krblAdminWho"></p>
       <div class="notice" style="margin:12px 0">Employee name, employee ID and email will be shown in the list. The Supabase UID remains the internal account key. This panel manages existing accounts; it does not invite/create login accounts yet.</div>
+      <div class="adminGrid" style="margin:14px 0">
+        <button type="button" id="krblOfficeTab">OFFICE — Users, roles & activity</button>
+        <button type="button" id="krblTeamTab" class="secondary">TEAM — Mandi operations</button>
+      </div>
+      <section id="krblOfficeSection">
+        <h3>Office Control Centre</h3>
+        <p>Office manages user profiles, role assignment, mandi access and activity review.</p>
+        <div class="notice"><b>Role permissions</b><br>Super Admin: full system/user management. Office: view all mandis, reports and activity; manage users only if authorized by Super Admin. Team: enter/update work only for assigned mandis. Viewer: read-only access.</div>
+        <button id="krblActivityRefresh" type="button" class="secondary">Refresh activity log</button>
+        <div id="krblActivityList">Activity log will appear here if the audit table is configured and Office/Admin read permission is granted.</div>
+      </section>
+      <section id="krblTeamSection" style="display:none">
+        <h3>Team Work Area</h3>
+        <p>Team users should see all mandi records, but create/edit only within assigned mandi access. The assignment list is managed from the employee profile below.</p>
+        <ul><li>Assigned mandi selection</li><li>Daily receipt/issue entry and status checks</li><li>Record history and discrepancy follow-up</li><li>All changes should be audit logged</li></ul>
+        <p><b>Security note:</b> actual Office/Team restrictions must be enforced by Supabase RLS policies before this is treated as secure.</p>
+      </section>
       <h3>Register / update employee profile</h3>
       <div class="adminGrid">
         <input id="krblAdminUid" type="hidden" value="">
@@ -712,8 +729,8 @@ render();
   async function loadProfiles(){
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const host=el('krblAdminList');host.textContent='Loading employee profiles…';await loadMandiOptions();
-    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,email,department,area,mandi_code,mandi_name,assigned_mandis,active,created_at').order('full_name',{ascending:true}).limit(300);
-    if(res.error){host.textContent='Profile table is not ready yet. Run the updated OFFICE_TEAM_SETUP.sql in Supabase, then refresh. Details: '+res.error.message;return;}
+    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,email,role,department,area,mandi_code,mandi_name,assigned_mandis,active,created_at').order('full_name',{ascending:true}).limit(300);
+    if(res.error){host.textContent='Could not load employee profiles: '+res.error.message+' (code '+(res.error.code||'n/a')+'). Confirm SQL ran in this same Supabase project and admin role is present.';msg('Load failed: '+res.error.message);return;}
     if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
     host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Email</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button></td></tr>').join('')+'</tbody></table>';
     host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminEmail').value=p.email||'';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
@@ -722,6 +739,9 @@ render();
   el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
   modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
   el('krblAdminRefresh').addEventListener('click',loadProfiles);
+  el('krblOfficeTab').addEventListener('click',()=>{el('krblOfficeSection').style.display='block';el('krblTeamSection').style.display='none';el('krblOfficeTab').classList.remove('secondary');el('krblTeamTab').classList.add('secondary');});
+  el('krblTeamTab').addEventListener('click',()=>{el('krblOfficeSection').style.display='none';el('krblTeamSection').style.display='block';el('krblTeamTab').classList.remove('secondary');el('krblOfficeTab').classList.add('secondary');});
+  el('krblActivityRefresh').addEventListener('click',async()=>{const host=el('krblActivityList');host.textContent='Loading activity…';const res=await krblSupabase.from('krbl_activity_log').select('actor_id,action,entity,entity_id,mandi_code,old_data,new_data,occurred_at').order('occurred_at',{ascending:false}).limit(100);if(res.error){host.textContent='Activity log unavailable: '+res.error.message;return;}if(!res.data.length){host.textContent='No activity recorded yet.';return;}host.innerHTML='<div style="overflow:auto"><table id="krblAdminRoles"><thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>Record</th><th>Mandi</th><th>Change details</th></tr></thead><tbody>'+res.data.map(x=>'<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity||'—')+'</td><td>'+esc(x.entity_id||'—')+'</td><td>'+esc(x.mandi_code||'—')+'</td><td><details><summary>View</summary><pre style="white-space:pre-wrap;max-width:320px">'+esc(JSON.stringify({old:x.old_data,new:x.new_data},null,2))+'</pre></details></td></tr>').join('')+'</tbody></table></div>';});
   el('krblSelectAllMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=true);msg('All '+el('krblAdminMandis').options.length+' listed mandis selected. Save the employee profile to apply this assignment.');});
   el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
   el('krblAdminSave').addEventListener('click',async()=>{
@@ -736,7 +756,7 @@ render();
     if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
     const assigned_mandis=selectedMandis;const codes=assigned_mandis.map(x=>x.code).filter(Boolean), names=assigned_mandis.map(x=>x.name).filter(Boolean);
     msg('Saving employee profile…');
-    const profile={user_id:uid,full_name:name,employee_id:empId||null,email,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
+    const profile={user_id:uid,full_name:name,employee_id:empId||null,email,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
     const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
     if(pr.error){msg('Profile save failed: '+pr.error.message+' — ensure the updated SQL setup has been run in Supabase.');return;}
     const rr=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
