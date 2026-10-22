@@ -656,7 +656,7 @@ render();
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="krblAdminTitle">KRBL User Management</h2><button type="button" class="secondary" id="krblAdminClose">Close</button></div>
       <p id="krblAdminWho"></p>
-      <div class="notice" style="margin:12px 0">Employee name, employee ID and email will be shown in the list. The Supabase UID remains the internal account key. This panel manages existing accounts; it does not invite/create login accounts yet.</div>
+      <div class="notice" style="margin:12px 0">Create User + Invite sends a secure Supabase invitation, then saves the employee role and assigned mandis. It requires the invite-employee Edge Function to be deployed in Supabase with its server-side service-role secret.</div>
       <div class="adminGrid" style="margin:14px 0">
         <button type="button" id="krblOfficeTab">OFFICE — Users, roles & activity</button>
         <button type="button" id="krblTeamTab" class="secondary">TEAM — Mandi operations</button>
@@ -693,7 +693,7 @@ render();
           <span style="font-weight:400;color:#596658">Select All Mandis assigns every mandi currently listed. You can also select individual mandis with Ctrl-click.</span>
         </label>
         <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
-        <div class="adminField" style="justify-content:end"><button id="krblAdminSave" type="button">Save employee profile + role</button></div>
+        <div class="adminField" style="justify-content:end;gap:8px"><button id="krblAdminInvite" type="button">Create User + Send Invite</button><button id="krblAdminSave" type="button" class="secondary">Save existing profile</button></div>
       </div>
       <div id="krblAdminMsg" role="status"></div>
       <h3 style="margin-top:22px">Registered employees</h3>
@@ -744,6 +744,26 @@ render();
   el('krblActivityRefresh').addEventListener('click',async()=>{const host=el('krblActivityList');host.textContent='Loading activity…';const res=await krblSupabase.from('krbl_activity_log').select('actor_id,action,entity,entity_id,mandi_code,old_data,new_data,occurred_at').order('occurred_at',{ascending:false}).limit(100);if(res.error){host.textContent='Activity log unavailable: '+res.error.message;return;}if(!res.data.length){host.textContent='No activity recorded yet.';return;}host.innerHTML='<div style="overflow:auto"><table id="krblAdminRoles"><thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>Record</th><th>Mandi</th><th>Change details</th></tr></thead><tbody>'+res.data.map(x=>'<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity||'—')+'</td><td>'+esc(x.entity_id||'—')+'</td><td>'+esc(x.mandi_code||'—')+'</td><td><details><summary>View</summary><pre style="white-space:pre-wrap;max-width:320px">'+esc(JSON.stringify({old:x.old_data,new:x.new_data},null,2))+'</pre></details></td></tr>').join('')+'</tbody></table></div>';});
   el('krblSelectAllMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=true);msg('All '+el('krblAdminMandis').options.length+' listed mandis selected. Save the employee profile to apply this assignment.');});
   el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
+  el('krblAdminInvite').addEventListener('click',async()=>{
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
+    const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
+    const assigned_mandis=getSelectedMandis();
+    if(!name){msg('Enter employee name.');return;}
+    if(!email||!/^\\S+@\\S+\\.\\S+$/.test(email)){msg('Enter a valid employee email.');return;}
+    if(!['office','team','viewer'].includes(role)){msg('For new invitations choose Office, Team or Viewer. Keep Super Admin assignment restricted to an existing administrator.');return;}
+    if(role==='team'&&!assigned_mandis.length){msg('Select at least one mandi for a Team employee.');return;}
+    if(!active){msg('New invitations must start as Active. Deactivate the profile after invitation if required.');return;}
+    const {data:{session}}=await krblSupabase.auth.getSession();
+    if(!session){msg('Please sign in again.');return;}
+    msg('Sending secure invitation and saving assigned access…');
+    const {data,error}=await krblSupabase.functions.invoke('invite-employee',{body:{full_name:name,employee_id:empId||null,email,role,area,assigned_mandis}});
+    if(error){msg('Invitation failed: '+(error.message||String(error))+'. Confirm invite-employee Edge Function is deployed and configured in Supabase.');return;}
+    if(data?.error){msg('Invitation failed: '+data.error);return;}
+    el('krblAdminUid').value=data.user_id||'';
+    msg('Invitation sent to '+email+'. Profile and mandi assignment saved. Ask the employee to open the invitation email and set their password.');
+    await loadProfiles();
+  });
   el('krblAdminSave').addEventListener('click',async()=>{
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
