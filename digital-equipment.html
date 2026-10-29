@@ -21,6 +21,16 @@
 <div class="stat"><small>Total receive quantity</small><strong id="received">0</strong><span class="muted">Recorded transactions</span></div>
 <div class="stat"><small>Returns recorded</small><strong id="returned">0</strong><span class="muted">Recorded transactions</span></div>
 </div>
+
+<section class="panel" style="margin-bottom:16px">
+<h2 style="margin-top:0">Excel Opening Summary & Balance Discrepancy</h2>
+<p class="muted">Imported from Digital System Details.xlsx. Both original balance columns are preserved; this report does not change live equipment transactions.</p>
+<div class="tablewrap"><table style="min-width:780px"><thead><tr><th>Equipment</th><th>Final Balance (Company)</th><th>Total (In Company R+S)</th><th>Difference</th><th>Status</th></tr></thead><tbody id="balanceRows"><tr><td colspan="5">Loading Excel summary…</td></tr></tbody></table></div>
+<h2>Original Excel Register</h2>
+<div class="tabs" id="excelTabs"><button class="active" data-sheet="Total">Total</button><button class="secondary" data-sheet="MANDI ISSUE">MANDI ISSUE</button><button class="secondary" data-sheet="MANDI RECEIVE">MANDI RECEIVE</button></div>
+<div class="tablewrap"><table id="excelTable" style="min-width:900px"><thead></thead><tbody><tr><td>Loading original Excel rows…</td></tr></tbody></table></div>
+<p class="muted" id="excelStatus">Original worksheet rows are displayed read-only.</p>
+</section>
 <div class="layout">
 <section class="panel"><h2 style="margin-top:0">New Transaction</h2>
 <form id="txForm">
@@ -44,10 +54,36 @@
 </section></div></div>
 </main>
 <script>
-(()=>{const $=id=>document.getElementById(id);let db=null,transactions=[],filter='all';const status=(m)=>$('status').textContent=m;
+(()=>{const $=id=>document.getElementById(id);let db=null,transactions=[],filter='all',excelRows=[],activeSheet='Total';const status=(m)=>$('status').textContent=m;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function init(){try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey);const {data,error}=await db.auth.getSession();if(error)throw error;if(!data.session){status('Please sign in to the main KRBL dashboard first, then open this page in the same browser.');return;}const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',data.session.user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin'){status('Access denied. Only the existing KRBL admin can use this first version.');return;}$('app').classList.remove('hide');$('txDate').value=new Date().toISOString().slice(0,10);await load();}catch(e){status('Setup needed or connection error: '+e.message+'. The dedicated equipment SQL setup must be applied first.');}}
+async function init(){try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey);const {data,error}=await db.auth.getSession();if(error)throw error;if(!data.session){status('Please sign in to the main KRBL dashboard first, then open this page in the same browser.');return;}const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',data.session.user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin'){status('Access denied. Only the existing KRBL admin can use this first version.');return;}$('app').classList.remove('hide');$('txDate').value=new Date().toISOString().slice(0,10);await Promise.all([load(),loadExcelData()]);}catch(e){status('Setup needed or connection error: '+e.message+'. The dedicated equipment SQL setup must be applied first.');}}
 async function load(){status('Loading separate equipment transactions…');const {data,error}=await db.from('krbl_equipment_transactions').select('*').order('transaction_date',{ascending:false}).order('created_at',{ascending:false}).limit(500);if(error){status('Equipment register is not ready yet. Run the dedicated SQL setup file from GitHub in Supabase SQL Editor. Details: '+error.message);return;}transactions=data||[];render();status('Connected. Showing up to 500 latest equipment transactions.');}
+
+async function loadExcelData(){
+ try{
+  const [b,i]=await Promise.all([
+   db.from('krbl_equipment_excel_balance_check').select('*').order('item_name'),
+   db.from('krbl_equipment_excel_import').select('sheet_name,source_row,row_data').order('source_row')
+  ]);
+  if(b.error) throw b.error;
+  if(i.error) throw i.error;
+  const balances=b.data||[]; excelRows=i.data||[];
+  $('balanceRows').innerHTML=balances.map(x=>{const d=Number(x.discrepancy||0);return '<tr><td>'+esc(x.item_name)+'</td><td>'+esc(x.final_balance_company)+'</td><td>'+esc(x.total_in_company_rs)+'</td><td><strong>'+esc(d)+'</strong></td><td>'+ (d===0?'Match':'Mismatch') +'</td></tr>'}).join('')||'<tr><td colspan="5">No balance summary found.</td></tr>';
+  renderExcelSheet();
+  $('excelStatus').textContent='Loaded '+excelRows.length+' original worksheet rows from Digital System Details.xlsx. Read-only archive; no values were reconciled or changed.';
+ }catch(e){$('balanceRows').innerHTML='<tr><td colspan="5">Excel report could not load: '+esc(e.message)+'</td></tr>';$('excelTable').querySelector('tbody').innerHTML='<tr><td>Could not load imported Excel rows.</td></tr>';$('excelStatus').textContent='Check that both Excel import tables exist and admin read policies are active.';}
+}
+function renderExcelSheet(){
+ const list=excelRows.filter(x=>x.sheet_name===activeSheet).sort((a,b)=>a.source_row-b.source_row);
+ const headerIndex=activeSheet==='Total'?0:1;
+ const headerRow=list.find(x=>x.source_row===(activeSheet==='Total'?1:2));
+ const headers=Array.isArray(headerRow?.row_data)?headerRow.row_data:[];
+ const visible=list.filter(x=>x!==headerRow && Array.isArray(x.row_data));
+ const thead=$('excelTable').querySelector('thead'),tbody=$('excelTable').querySelector('tbody');
+ thead.innerHTML='<tr><th>Source row</th>'+headers.map((h,i)=>'<th>'+esc(h||('Column '+(i+1)))+'</th>').join('')+'</tr>';
+ tbody.innerHTML=visible.map(x=>'<tr><td>'+esc(x.source_row)+'</td>'+x.row_data.map(v=>'<td>'+esc(v===null?'':v)+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+(headers.length+1)+'">No rows found.</td></tr>';
+}
+document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>{activeSheet=b.dataset.sheet;document.querySelectorAll('[data-sheet]').forEach(x=>{x.classList.toggle('active',x===b);x.classList.toggle('secondary',x!==b)});renderExcelSheet()}));
 function render(){const list=filter==='all'?transactions:transactions.filter(x=>x.transaction_type===filter);$('rows').innerHTML=list.length?list.map(x=>'<tr><td>'+esc(x.transaction_date)+'</td><td>'+esc(x.transaction_type)+'</td><td>'+esc(x.item_name)+'</td><td>'+esc(x.quantity)+'</td><td>'+esc([x.mandi_code,x.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+esc(x.person||'—')+'</td><td>'+esc(x.reference||'—')+'</td></tr>').join(''):'<tr><td colspan="7">No transactions for this filter.</td></tr>';$('issued').textContent=transactions.filter(x=>x.transaction_type==='issue').reduce((a,x)=>a+Number(x.quantity||0),0);$('received').textContent=transactions.filter(x=>x.transaction_type==='receive').reduce((a,x)=>a+Number(x.quantity||0),0);$('returned').textContent=transactions.filter(x=>x.transaction_type==='return').reduce((a,x)=>a+Number(x.quantity||0),0);}
 $('txForm').addEventListener('submit',async e=>{e.preventDefault();if(!db)return;const {data:{session}}=await db.auth.getSession();if(!session){status('Session expired. Sign in again.');return;}const payload={transaction_date:$('txDate').value,transaction_type:$('txType').value,item_name:$('item').value,quantity:Number($('qty').value),mandi_code:$('mandiCode').value.trim()||null,mandi_name:$('mandiName').value.trim()||null,person:$('person').value.trim()||null,reference:$('ref').value.trim()||null,remarks:$('remarks').value.trim()||null,created_by:session.user.id};$('save').disabled=true;const {error}=await db.from('krbl_equipment_transactions').insert(payload);$('save').disabled=false;if(error){status('Save failed: '+error.message);return;}e.target.reset();$('txDate').value=new Date().toISOString().slice(0,10);status('Transaction saved.');await load();});
 document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.classList.toggle('secondary',x!==b)});render()}));$('refresh').addEventListener('click',load);init();})();
