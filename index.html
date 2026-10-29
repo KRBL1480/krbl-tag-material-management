@@ -121,6 +121,10 @@ button.secondary:hover{background:#d6efc6}
 button.danger{background:#c9362b;color:white;border:1px solid #b52b21}
 button.danger:hover{background:#a92720}
 
+
+/* Prominent shortcut to the separate equipment register */
+.sidebar button.equipment-nav{background:linear-gradient(100deg,#f7d995,#ffefc7);color:#12482f;border:1px solid #e7bf6d;box-shadow:0 3px 10px #001e1220;margin:8px 0 10px;font-weight:850}
+.sidebar button.equipment-nav:hover{background:linear-gradient(100deg,#ffe8ae,#fff5da)}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -182,12 +186,13 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
 <nav class="sidebar" aria-label="Register sections">
   <div class="side-brand">KRBL LIMITED<br>MATERIAL ISSUE SYSTEM</div>
   <button type="button" data-page="dashboard" class="active"><span>⌂</span>Dashboard</button>
+  <button type="button" id="digitalEquipmentNav" class="equipment-nav" onclick="window.location.href='digital-equipment.html'"><span>🖨️</span>Digital Equipment</button>
   <button type="button" data-page="receipt"><span>＋</span>Material Receipt</button>
   <button type="button" data-page="issue"><span>🚚</span>Mandi Issue</button>
   <button type="button" data-page="issue-history"><span>▤</span>Issue History</button>
   <button type="button" data-page="receipt-history"><span>▣</span>Receipt History</button>
   <button type="button" data-page="stock"><span>▥</span>Stock & Calculation</button>
-  <button type="button" id="digitalEquipmentNav" onclick="window.location.href='digital-equipment.html'"><span>🖨️</span>Digital Equipment</button>
+
   <button type="button" data-page="backup"><span>◉</span>Backup & Restore</button>
   <button type="button" id="krblLogoutBtn"><span>↪</span>Log out</button>
 </nav>
