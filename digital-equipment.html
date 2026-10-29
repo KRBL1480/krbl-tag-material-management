@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KRBL | Digital Equipment Management</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+:root{--green:#006b3c;--dark:#06452b;--gold:#e9a23b;--bg:#f4f7f2;--line:#dbe5d8;--text:#1e2b22;--muted:#68756b;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--text)}header{background:linear-gradient(110deg,#e7f4e5,#fff1d2);border-bottom:5px solid var(--gold);padding:22px}header .wrap,main{max-width:1250px;margin:auto}h1{margin:0;color:var(--dark);font-size:clamp(22px,3vw,32px)}header p{margin:8px 0 0;color:#5b654e}main{padding:22px 16px}.top{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:16px}.tag{font-size:12px;letter-spacing:1px;color:var(--green);font-weight:700;text-transform:uppercase}.panel,.stat{background:white;border:1px solid var(--line);border-radius:13px;padding:17px;box-shadow:0 4px 14px #193b1510}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.stat small{color:var(--muted)}.stat strong{display:block;font-size:23px;margin-top:8px}.layout{display:grid;grid-template-columns:360px 1fr;gap:15px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}input,select,textarea{width:100%;padding:10px;border:1px solid #ccd8ca;border-radius:8px;background:white;font:inherit}button,.btn{border:0;border-radius:8px;padding:10px 14px;background:var(--green);color:white;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}button.secondary{background:#e8efe5;color:var(--dark)}button:disabled{opacity:.5;cursor:not-allowed}.field{margin-bottom:12px}.wide{grid-column:1/-1}.muted{color:var(--muted);font-size:13px;line-height:1.5}.status{padding:10px;border-radius:8px;background:#edf4ea;margin:12px 0;font-size:13px}.tablewrap{overflow:auto;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{text-align:left;padding:10px;border-bottom:1px solid #e5ece2;font-size:13px}th{background:#f0f5ed;color:var(--dark)}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tabs button.active{background:var(--gold);color:#30220d}.hide{display:none!important}@media(max-width:900px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.formgrid{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style></head>
+<body>
+<header><div class="wrap"><div class="tag">KRBL Digital System • Separate Register</div><h1>Digital Equipment Management</h1><p>HHT devices, Zebra printers, cutters, charger cables and connector cables — independent from Tag Material Management.</p></div></header>
+<main>
+<div class="top"><div><strong>Equipment Issue / Receive / Return</strong><div class="muted">Separate records only. Existing tag stock and transactions are not used by this page.</div></div><div><a class="btn" href="index.html">← Back to Main Dashboard</a> <button class="secondary" id="refresh">Refresh</button></div></div>
+<div id="status" class="status">Checking sign-in and equipment register…</div>
+<div id="app" class="hide">
+<div class="grid">
+<div class="stat"><small>Equipment types</small><strong>5</strong><span class="muted">From supplied Excel</span></div>
+<div class="stat"><small>Total issue quantity</small><strong id="issued">0</strong><span class="muted">Recorded transactions</span></div>
+<div class="stat"><small>Total receive quantity</small><strong id="received">0</strong><span class="muted">Recorded transactions</span></div>
+<div class="stat"><small>Returns recorded</small><strong id="returned">0</strong><span class="muted">Recorded transactions</span></div>
+</div>
+<div class="layout">
+<section class="panel"><h2 style="margin-top:0">New Transaction</h2>
+<form id="txForm">
+<div class="field"><label for="txDate">Date *</label><input id="txDate" type="date" required></div>
+<div class="field"><label for="txType">Transaction type *</label><select id="txType" required><option value="receive">Receive into store</option><option value="issue">Issue to mandi / employee</option><option value="return">Return to store</option></select></div>
+<div class="field"><label for="item">Equipment *</label><select id="item" required><option>Zebra Printer</option><option>HHT Device</option><option>Charger Cable</option><option>Cutter</option><option>Connector Cable</option></select></div>
+<div class="formgrid">
+<div class="field"><label for="qty">Quantity *</label><input id="qty" type="number" min="1" step="1" required></div>
+<div class="field"><label for="mandiCode">Mandi code</label><input id="mandiCode" placeholder="e.g. H061"></div>
+<div class="field"><label for="mandiName">Mandi / location</label><input id="mandiName" placeholder="e.g. GOHANA"></div>
+<div class="field"><label for="person">Issued to / received from</label><input id="person" placeholder="Name / department"></div>
+<div class="field wide"><label for="ref">Reference / serial number</label><input id="ref" placeholder="Optional reference"></div>
+<div class="field wide"><label for="remarks">Remarks</label><textarea id="remarks" rows="2" placeholder="Condition, purpose, etc."></textarea></div>
+</div><button id="save" type="submit">Save Transaction</button>
+<p class="muted">Transactions are written to the separate equipment table. Do not use this page until the dedicated SQL setup has been run.</p>
+</form></section>
+<section class="panel"><h2 style="margin-top:0">Transaction Register</h2>
+<div class="tabs"><button class="active" data-filter="all">All</button><button class="secondary" data-filter="receive">Receive</button><button class="secondary" data-filter="issue">Issue</button><button class="secondary" data-filter="return">Return</button></div>
+<div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Equipment</th><th>Qty</th><th>Mandi</th><th>Person</th><th>Reference</th></tr></thead><tbody id="rows"><tr><td colspan="7">No records loaded.</td></tr></tbody></table></div>
+<p class="muted">This first build does not import Excel quantities automatically. Opening balances must be verified and imported separately before treating any calculated balance as official.</p>
+</section></div></div>
+</main>
+<script>
+(()=>{const $=id=>document.getElementById(id);let db=null,transactions=[],filter='all';const status=(m)=>$('status').textContent=m;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function init(){try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey);const {data,error}=await db.auth.getSession();if(error)throw error;if(!data.session){status('Please sign in to the main KRBL dashboard first, then open this page in the same browser.');return;}const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',data.session.user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin'){status('Access denied. Only the existing KRBL admin can use this first version.');return;}$('app').classList.remove('hide');$('txDate').value=new Date().toISOString().slice(0,10);await load();}catch(e){status('Setup needed or connection error: '+e.message+'. The dedicated equipment SQL setup must be applied first.');}}
+async function load(){status('Loading separate equipment transactions…');const {data,error}=await db.from('krbl_equipment_transactions').select('*').order('transaction_date',{ascending:false}).order('created_at',{ascending:false}).limit(500);if(error){status('Equipment register is not ready yet. Run the dedicated SQL setup file from GitHub in Supabase SQL Editor. Details: '+error.message);return;}transactions=data||[];render();status('Connected. Showing up to 500 latest equipment transactions.');}
+function render(){const list=filter==='all'?transactions:transactions.filter(x=>x.transaction_type===filter);$('rows').innerHTML=list.length?list.map(x=>'<tr><td>'+esc(x.transaction_date)+'</td><td>'+esc(x.transaction_type)+'</td><td>'+esc(x.item_name)+'</td><td>'+esc(x.quantity)+'</td><td>'+esc([x.mandi_code,x.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+esc(x.person||'—')+'</td><td>'+esc(x.reference||'—')+'</td></tr>').join(''):'<tr><td colspan="7">No transactions for this filter.</td></tr>';$('issued').textContent=transactions.filter(x=>x.transaction_type==='issue').reduce((a,x)=>a+Number(x.quantity||0),0);$('received').textContent=transactions.filter(x=>x.transaction_type==='receive').reduce((a,x)=>a+Number(x.quantity||0),0);$('returned').textContent=transactions.filter(x=>x.transaction_type==='return').reduce((a,x)=>a+Number(x.quantity||0),0);}
+$('txForm').addEventListener('submit',async e=>{e.preventDefault();if(!db)return;const {data:{session}}=await db.auth.getSession();if(!session){status('Session expired. Sign in again.');return;}const payload={transaction_date:$('txDate').value,transaction_type:$('txType').value,item_name:$('item').value,quantity:Number($('qty').value),mandi_code:$('mandiCode').value.trim()||null,mandi_name:$('mandiName').value.trim()||null,person:$('person').value.trim()||null,reference:$('ref').value.trim()||null,remarks:$('remarks').value.trim()||null,created_by:session.user.id};$('save').disabled=true;const {error}=await db.from('krbl_equipment_transactions').insert(payload);$('save').disabled=false;if(error){status('Save failed: '+error.message);return;}e.target.reset();$('txDate').value=new Date().toISOString().slice(0,10);status('Transaction saved.');await load();});
+document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.classList.toggle('secondary',x!==b)});render()}));$('refresh').addEventListener('click',load);init();})();
+</script></body></html>
