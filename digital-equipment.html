@@ -92,7 +92,7 @@ th{background:linear-gradient(90deg,#cde7d2,#dcebd8)}
 @media(max-width:560px){.equipment-header{grid-template-columns:1fr;grid-template-areas:"logo" "title" "mark" "tools";justify-items:center}.equipment-header .logo{width:180px;min-width:180px;max-width:180px;height:92px}.equipment-header .krbl-real-logo{height:92px}.equipment-header .headtitle{width:100%}.equipment-header .headtitle h1{font-size:23px}.equipment-header .headtools{flex-wrap:wrap}.equipment-header .toolbtn{flex:1;min-width:42%;}.equipment-header .searchbox{width:100%}}
 
 /* Receipt totals and source-wise equipment quantities */
-.receive-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 14px}
+.receive-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}
 .receive-summary>div{padding:13px 16px;border-radius:12px;border:1px solid #c8d9bd;background:linear-gradient(120deg,#e2efdb,#f4e9c9);box-shadow:0 4px 12px #244b2710}
 .receive-summary>div:nth-child(2){background:linear-gradient(120deg,#dceaf8,#e6f0e5);border-color:#c3d4e6}
 .receive-summary>div:nth-child(3){background:linear-gradient(120deg,#f8e5d5,#f2e9d0);border-color:#e7cfaa}
@@ -102,7 +102,7 @@ th{background:linear-gradient(90deg,#cde7d2,#dcebd8)}
 .item-stock-received{border-top:1px solid #c6d9c6;margin-top:9px;padding-top:7px}
 .item-stock-received b{display:block;color:#0b6b43;font-size:12px}
 .item-stock-received small{display:block;font-size:9px;line-height:1.45;margin-top:4px;color:#526b5b}
-@media(max-width:850px){.receive-summary{grid-template-columns:1fr 1fr}}
+@media(max-width:850px){.receive-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.receive-summary{grid-template-columns:1fr}}
 
 /* Replace equipment asset badge with transparent India Gate mark */
