@@ -12,6 +12,40 @@
 @media(max-width:850px){.item-stock-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.shell{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:9px}.sidebrand{grid-column:1/-1;padding:6px 10px}.sidebottom{display:none}.navbtn{justify-content:center;padding:10px 5px;font-size:11px;gap:5px}.navbtn .ico{width:auto}.main{padding:13px}.header{padding:13px}.logo{width:auto}.logo small{display:none}.headtools{gap:6px}.toolbtn{min-width:62px}.searchbox{width:100%;flex:1}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.header{gap:10px}.logo-mark{width:47px;height:47px}.headtitle{min-width:0}.headtitle h1{font-size:22px}.headtitle p{font-size:12px}.headtools .toolbtn{flex:1;min-width:0}.kpis{gap:8px}.kpi{padding:11px;gap:8px}.kpiicon{width:36px;height:36px;min-width:36px;font-size:18px}.kpi strong{font-size:22px}.contentgrid{display:block}.sidecol{display:flex;margin-top:12px}.formgrid{grid-template-columns:1fr}.field.wide{grid-column:auto}.panel{padding:12px}.sectiontabs button{flex:1}.quickactions{grid-template-columns:1fr 1fr 1fr}}
 @media print{.sidebar,.headtools,.sectiontabs,.no-print,.quickactions,.form-panel{display:none!important}.shell{display:block}.main{padding:0}.panel,.kpi{box-shadow:none;break-inside:avoid}.header{border-bottom:2px solid #006b3c}}
+
+/* KRBL refined corporate theme: deeper greens, less white, cleaner typography */
+:root{--green:#087448;--deep:#003b2b;--dark:#064b35;--gold:#d99a2b;--bg:#e4eee2;--line:#c7dac8;--text:#123d30;--muted:#526f61;--white:#eaf2e8}
+body{background:linear-gradient(135deg,#dce9dc 0%,#e8f0e2 52%,#f1e9d5 100%);font-family:"Aptos","Segoe UI",Arial,sans-serif;color:#123d30}
+.header{background:linear-gradient(105deg,#e6efe3 0%,#d8e9d7 52%,#e9e2ca 100%);border-bottom:4px solid #d99a2b;box-shadow:0 5px 20px #123d3020}
+.logo{width:160px;min-width:160px;max-width:160px}
+.krbl-real-logo{width:185px;height:105px;max-height:105px;object-fit:contain;object-position:left center;clip-path:inset(0 15% 0 0)}
+.headtitle h1{font-weight:850;letter-spacing:-.8px;color:#003f2c}
+.headtitle p{color:#496858;font-weight:550}
+.toolbtn{background:#dcebdd;border:1px solid #b9d2bd;color:#064b35;box-shadow:0 3px 8px #17462a12}
+.searchbox,.field input,.field select,.field textarea,.searchinput{background:#edf4eb;border-color:#bfd4c1;color:#173f31}
+.shell{background:transparent}
+.main{background:linear-gradient(135deg,#e6efe3 0%,#edf2e5 68%,#f1ead8 100%)}
+.status{background:#d9ecdc;border-color:#b8d9bd;color:#14583a}
+.item-stock-card{background:#dcebdd;border-color:#bcd4bf;box-shadow:0 5px 14px #17462a12}
+.item-stock-card small{color:#3f6652}
+.item-stock-card strong{color:#06452f;font-weight:850}
+.panel{background:#e4eee2;border-color:#c5d9c6;box-shadow:0 6px 18px #17462a12}
+.panel h2,.pagehead h2{color:#06452f;font-weight:850}
+th{background:#cfe5d1;color:#104a33}
+tbody tr:nth-child(even){background:#eaf2e8}
+tbody tr:nth-child(odd){background:#f0f5ec}
+tbody tr:hover{background:#dcebdc}
+.tablewrap{border-color:#c6d9c6}
+.badge{background:#cdebd3;color:#145b37}
+.badge.warn{background:#f5e5bd;color:#80520c}
+.badge.bad{background:#f2d6d2;color:#8e2922}
+.itemicon{background:#d4e8d5}
+.donut:after{background:#e4eee2;box-shadow:inset 0 0 0 1px #c7dac8}
+.secondary{background:#d7e8d7;color:#064b35;border-color:#b9d1bb}
+.navbtn.active{background:linear-gradient(100deg,#a9e49a,#c7efb9);color:#003f2b}
+.field label{color:#244d3a}
+.note{background:#f0e6ca;border-color:#ddc98e;color:#634a1b}
+@media(max-width:850px){.logo{width:auto;min-width:0;max-width:none}.krbl-real-logo{width:170px}}
 </style>
 </head>
 <body>
