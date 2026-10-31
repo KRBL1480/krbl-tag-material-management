@@ -60,10 +60,10 @@
     </section>
     <div class="sidecol">
      <section class="panel"><div class="panelhead"><div><h2>Equipment Distribution</h2><div class="subhead">By current stock quantity</div></div></div><div class="donutrow"><div class="donut" id="donut"><div class="donutcenter"><span id="donutTotal"> </span><small>Stock<br>Mix</small></div></div><div id="legend" class="legend"></div></div></section>
-     <section class="panel"><div class="panelhead"><div><h2>Quick Actions</h2><div class="subhead">Common equipment tasks</div></div></div><div class="quickactions"><button class="issue" data-quick="issue">＋ New Issue</button><button class="return" data-quick="return">↩ Return</button><button class="receive" data-quick="receive">＋ Receive</button></div><p class="muted">Each saved movement is stored in the separate equipment register.</p></section>
+
     </div>
    </div>
-   <section class="panel recent"><div class="panelhead"><div><h2>Recent Transactions</h2><div class="subhead">Latest equipment issue, receive and return records</div></div><button class="secondary" data-goto="transactions">View All Transactions →</button></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type / Source</th><th>Equipment</th><th>Quantity</th><th>Mandi Location</th><th>User / Person</th><th>Reference / Remarks</th></tr></thead><tbody id="recentRows"><tr><td colspan="7" class="empty">No transactions loaded.</td></tr></tbody></table></div></section>
+
   </section>
   <section class="section" id="section-transactions">
    <section class="panel"><div class="panelhead"><div><h2>Transaction Register</h2><div class="subhead">Search and filter all recorded equipment movements</div></div><div class="filters"><select id="txFilter" class="searchinput"><option value="all">All transaction types</option><option value="receive">Receive</option><option value="issue">Issue</option><option value="return">Return</option></select><input id="txSearch" class="searchinput" placeholder="Search register…"></div></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Equipment</th><th>Qty</th><th>Mandi Code</th><th>Mandi / Location</th><th>Person</th><th>Reference</th><th>Remarks</th><th>Actions</th></tr></thead><tbody id="txRows"><tr><td colspan="9" class="empty">No transactions loaded.</td></tr></tbody></table></div></section>
@@ -121,7 +121,7 @@ function renderBalances(){return;}
 function renderExcelSheet(){return;}
 
 function renderReports(){const data=stockData();$('reportRows').textContent=num(transactions.length);$('lowStock').textContent=data.filter(x=>x.current<=2).length;$('reportRowsTable').innerHTML=data.map(x=>'<tr><td>'+esc(x.item)+'</td><td>'+num(x.headOffice)+'</td><td>'+num(x.storePurchase)+'</td><td>'+num(x.dh01Transfer)+'</td><td>'+num(x.issue)+'</td><td>'+num(x.returned)+'</td><td><strong>'+num(x.current)+'</strong></td></tr>').join('');}
-function renderAll(){renderStock();renderRecent();renderTransactions();renderReports();}
+function renderAll(){renderStock();renderTransactions();renderReports();}
 async function load(){setStatus('Loading equipment transactions…');const {data,error}=await db.from('krbl_equipment_transactions').select('*').order('transaction_date',{ascending:false}).order('created_at',{ascending:false}).limit(500);if(error)throw error;transactions=data||[];}
 async function loadExcel(){const [b,i]=await Promise.all([db.from('krbl_equipment_excel_balance_check').select('*').order('item_name'),db.from('krbl_equipment_excel_import').select('sheet_name,source_row,row_data').order('source_row')]);if(b.error)throw b.error;if(i.error)throw i.error;balances=b.data||[];excelRows=i.data||[];}
 async function loadForUser(user){const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin')throw Error('Access denied. This register is currently restricted to the KRBL admin.');balances=[];excelRows=[];await load();$('loginPanel').style.display='none';$('app').classList.remove('hide');$('txDate').value=new Date().toLocaleDateString('en-CA');setStatus('Connected. '+transactions.length+' equipment transactions loaded. Fresh equipment register is ready.');renderAll();}
