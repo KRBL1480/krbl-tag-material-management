@@ -61,3 +61,36 @@ from pg_policies
 where schemaname='public'
   and tablename='krbl_equipment_transactions'
 order by policyname;
+-- Transfer-out support: records stock sent from Company Store to another plant/location.
+alter table public.krbl_equipment_transactions
+  add column if not exists transfer_destination text;
+
+-- Expand the transaction type constraint without deleting existing transactions.
+do $$
+declare
+  con record;
+begin
+  for con in
+    select conname from pg_constraint
+    where conrelid='public.krbl_equipment_transactions'::regclass
+      and contype='c'
+      and pg_get_constraintdef(oid) ilike '%transaction_type%'
+  loop
+    execute format('alter table public.krbl_equipment_transactions drop constraint %I', con.conname);
+  end loop;
+  alter table public.krbl_equipment_transactions
+    add constraint krbl_equipment_transaction_type_check
+    check (transaction_type in ('receive','issue','return','transfer_out'));
+end $$;
+
+create index if not exists krbl_equipment_tx_transfer_destination
+  on public.krbl_equipment_transactions(transfer_destination, transaction_date desc);
+
+-- Verify transfer-out schema is available.
+select column_name from information_schema.columns
+where table_schema='public' and table_name='krbl_equipment_transactions'
+  and column_name='transfer_destination';
+select pg_get_constraintdef(oid) as transaction_type_rule
+from pg_constraint
+where conrelid='public.krbl_equipment_transactions'::regclass
+  and conname='krbl_equipment_transaction_type_check';
