@@ -185,6 +185,7 @@ main.main > section.section.active{display:block!important}
  <button class="navbtn" data-section="transfer"><span class="ico">⇄</span>Equipment Transfer Out</button>
  <button class="navbtn" data-section="transactions"><span class="ico">▤</span>Transaction Register</button>
  <button class="navbtn" data-section="verify"><span class="ico">✓</span>Equipment Verification</button>
+ <button class="navbtn" data-section="excel-reference"><span class="ico">▦</span>Excel Reference Report</button>
  <button class="navbtn" data-section="reports"><span class="ico">▥</span>Reports & Analytics</button>
  <button class="navbtn" id="backMain"><span class="ico">↩</span>Main Dashboard</button>
  <div class="sidebottom">● Connected workspace<strong>Admin Equipment Register</strong><span>Tag material records remain separate.</span></div>
@@ -215,6 +216,15 @@ main.main > section.section.active{display:block!important}
      <div class="tablewrap"><table><thead><tr><th>#</th><th>Equipment Name</th><th>Head Office</th><th>Store Purchase</th><th>DH01 Transfer</th><th>Total Received</th><th>Mandi Issue</th><th>Mandi Return</th><th>Transfer Out</th><th>Department Stock</th><th>Store Stock</th><th>Total Final Balance</th><th>Status</th></tr></thead><tbody id="stockRows"><tr><td colspan="8" class="empty">Loading equipment stock…</td></tr></tbody></table></div>
      <p class="muted">Department Stock = Mandi Return. Store Stock = Total Received − Mandi Issue − Transfer Out. Total Final Balance = Department Stock + Store Stock. Cancelled transactions have no stock effect: cancelled issues restore Store Stock, while cancelled returns are removed from Department Stock.</p>
     </section>
+   
+    <div class="sidecol">
+     <section class="panel"><div class="panelhead"><div><h2>Equipment Distribution</h2><div class="subhead">By total final balance (Store + Department)</div></div></div><div class="donutrow"><div class="donut" id="donut"><div class="donutcenter"><span id="donutTotal"> </span><small>Stock<br>Mix</small></div></div><div id="legend" class="legend"></div></div></section>
+
+    </div>
+   </div>
+
+  </section>
+  <section class="section" id="section-excel-reference">
    <section class="panel" style="margin-top:14px">
     <div class="panelhead"><div><h2>Excel Physical Stock Reference</h2><div class="subhead">Source: Digital System Details.xlsx · Total sheet · reference figures, kept separate from live transaction calculations</div></div><span class="badge">Excel Reference</span></div>
     <div class="tablewrap"><table style="min-width:850px"><thead><tr><th>Equipment</th><th>Total Received</th><th>Mandi Issue</th><th>GZB</th><th>Total Issue</th><th>Final Balance (Company)</th><th>Total (In Company)</th></tr></thead><tbody>
@@ -227,12 +237,6 @@ main.main > section.section.active{display:block!important}
     </tbody></table></div>
     <p class="muted">Important: “Final Balance (Company)” and “Total (In Company)” are separate source columns and are not interchangeable. This reference does not overwrite live Supabase transactions.</p>
    </section>
-    <div class="sidecol">
-     <section class="panel"><div class="panelhead"><div><h2>Equipment Distribution</h2><div class="subhead">By total final balance (Store + Department)</div></div></div><div class="donutrow"><div class="donut" id="donut"><div class="donutcenter"><span id="donutTotal"> </span><small>Stock<br>Mix</small></div></div><div id="legend" class="legend"></div></div></section>
-
-    </div>
-   </div>
-
   </section>
   <section class="section" id="section-transactions">
    <section class="panel"><div class="panelhead"><div><h2>Transaction Register</h2><div class="subhead">Search and filter all recorded equipment movements</div></div><div class="filters"><select id="txFilter" class="searchinput"><option value="all">All transaction types</option><option value="receive">Receive</option><option value="issue">Issue</option><option value="return">Return</option><option value="transfer_out">Transfer Out</option></select><select id="mandiFilter" class="searchinput"><option value="all">All Mandis (grouped)</option><option value="__store">Company Store (no mandi)</option></select><input id="txSearch" class="searchinput" placeholder="Search register…"></div></div><div id="mandiCards" class="mandi-cards" aria-label="Select a mandi to view its transactions"></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Equipment</th><th>Qty</th><th>Mandi Code</th><th>Mandi / Location</th><th>Person</th><th>Reference</th><th>Remarks</th><th>Actions</th></tr></thead><tbody id="txRows"><tr><td colspan="9" class="empty">No transactions loaded.</td></tr></tbody></table></div><section class="panel" id="mandiEquipmentSummary" style="margin-top:16px"><div class="panelhead"><div><h2 id="mandiSummaryTitle">Mandi-wise Equipment Summary</h2><div class="subhead">Equipment issued, returned and currently held at the selected mandi</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button type="button" class="secondary" id="mandiReportBtn">Generate & Share Mandi Report</button><button type="button" id="mandiReceiptBtn">Generate Equipment Receipt</button></div></div><div class="kpis" id="mandiSummaryKpis" style="grid-template-columns:repeat(3,minmax(0,1fr))"></div><div class="tablewrap"><table><thead><tr><th>Equipment</th><th>Total Issued</th><th>Total Returned</th><th>Currently at Mandi</th><th>Verification</th></tr></thead><tbody id="mandiSummaryRows"><tr><td colspan="5" class="empty">Select one mandi to view its equipment balance.</td></tr></tbody></table></div><section id="mandiReceipt" class="krbl-receipt" style="display:none">
