@@ -203,13 +203,13 @@ main.main > section.section.active{display:block!important}
  <p class="muted">Sign-in is handled by the existing KRBL Supabase project. No new account is required.</p>
 </section>
 <div id="app" class="hide">
+  <section class="section active" id="section-overview">
   <div class="receive-summary" id="receiveSummary"><div><small>TOTAL EQUIPMENT RECEIVED</small><strong id="totalReceivedUnits">0</strong><span>Units received across all equipment categories</span></div><div><small>TOTAL MANDI ISSUED</small><strong id="totalIssuedUnits">0</strong><span>Units issued to all mandis</span></div><div><small>TOTAL MANDI RETURNS</small><strong id="totalReturnedUnits">0</strong><span>Units returned to Company Store</span></div><div><small>TOTAL TRANSFER OUT</small><strong id="totalTransferOutUnits">0</strong><span>Units sent to other plants / locations</span></div></div><div class="receive-summary stock-balance-summary" id="stockBalanceSummary">
    <div><small>STORE STOCK</small><strong id="summaryStoreStock">0</strong><span>Equipment physically available in store</span></div>
    <div><small>DEPARTMENT / MANDI STOCK</small><strong id="summaryDepartmentStock">0</strong><span>Issued less returned equipment</span></div>
    <div><small>TOTAL FINAL BALANCE</small><strong id="summaryFinalBalance">0</strong><span>Store stock + Department stock</span></div>
   </div>
   <div class="item-stock-cards" id="itemStockCards" aria-label="Equipment-wise store, department and final stock"></div>
-  <section class="section active" id="section-overview">
    <div class="contentgrid">
     <section class="panel">
      <div class="panelhead"><div><h2>Equipment Stock Overview</h2><div class="subhead">Current availability of all equipment items</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><select id="itemFilter" class="searchinput"><option value="">All Equipment</option><option>HHT Device</option><option>Zebra Printer</option><option>Charger Cable</option><option>Cutter</option><option>Connector Cable</option></select><input id="stockSearch" class="searchinput" placeholder="Search equipment…"></div></div>
