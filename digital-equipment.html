@@ -151,6 +151,10 @@ body{background:#edf3ed}
 /* Mandi-wise equipment count chips: always show every category */
 .mandi-card div{display:flex;flex-wrap:wrap;align-items:flex-start;gap:3px}
 .mandi-card div span{line-height:1.2}
+
+/* Enforce single-section navigation: only the selected main section is visible */
+main.main > section.section{display:none!important}
+main.main > section.section.active{display:block!important}
 </style>
 </head>
 <body>
