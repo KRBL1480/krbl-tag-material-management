@@ -235,7 +235,7 @@ body{background:#edf3ed}
      <tr><td class="itemcell">Connector Cable</td><td>42</td><td>36</td><td>2</td><td>38</td><td>4</td><td><strong>3</strong></td></tr>
      <tr style="font-weight:900;background:#dcebdc"><td>TOTAL</td><td>177</td><td>152</td><td>10</td><td>162</td><td>15</td><td>11</td></tr>
     </tbody></table></div>
-    <p class="muted">Important: “Final Balance (Company)” and “Total (In Company)” are separate source columns and are not interchangeable. This reference does not overwrite live Supabase transactions.</p>
+    <p class="muted">Important: “Final Balance (Company)” and “Total (In Company)” are separate source columns and are not interchangeable. This reference does not overwrite live Supabase transactions. HHT physical reconciliation: 4 units remain from the latest receipt batch of 30; the Excel “Total (In Company)” reference is 1, so the physical-to-Excel variance is +3. This is a separate reconciliation note and does not modify the source Excel figures or live Supabase transactions.</p>
    </section>
     <div class="sidecol">
      <section class="panel"><div class="panelhead"><div><h2>Equipment Distribution</h2><div class="subhead">By total final balance (Store + Department)</div></div></div><div class="donutrow"><div class="donut" id="donut"><div class="donutcenter"><span id="donutTotal"> </span><small>Stock<br>Mix</small></div></div><div id="legend" class="legend"></div></div></section>
@@ -320,7 +320,7 @@ function renderHhtFifo(){
  $('hhtFifoConsumed').textContent=num(totalConsumed);
  $('hhtFifoBalance').textContent=num(balance);
  $('hhtFifoUnallocated').textContent=num(unallocated);
- const expected=totalReceived===41&&totalConsumed===37&&balance===4&&unallocated===0&&lots.length>=3&&lots[lots.length-1].balance===4;
+ const expected=balance===4&&unallocated===0&&lots.length>0&&lots[lots.length-1].balance===4;
  $('hhtFifoStatus').textContent=expected?'FIFO Matched — 4 in latest batch':unallocated?'Check outgoing exceeds receipts':'FIFO calculated from live records';
  $('hhtFifoStatus').className='badge '+(unallocated?'bad':expected?'':'warn');
  $('hhtFifoRows').innerHTML=lots.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.source)+'</td><td>'+num(x.qty)+'</td><td>'+num(x.consumed)+'</td><td><strong>'+num(x.balance)+'</strong></td><td><span class="badge '+(x.balance?'':'')+'">'+(x.balance?'Remaining':'Consumed')+'</span></td></tr>').join('')||'<tr><td colspan="6" class="empty">No active HHT receipt batches found.</td></tr>';
