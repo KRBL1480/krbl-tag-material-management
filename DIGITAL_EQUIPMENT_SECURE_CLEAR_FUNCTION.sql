@@ -1,6 +1,5 @@
--- KRBL Digital Equipment: secure admin-only clear of transaction rows.
--- Deletes ONLY equipment transaction rows. Excel reference/import, users, roles,
--- tag-material data, and the audit log are deliberately preserved.
+-- KRBL Digital Equipment: secure admin-only reset of equipment and Excel reference rows.
+-- Preserves authentication users, KRBL roles, and unrelated application modules.
 -- Run this SQL once in the linked Supabase project's SQL Editor.
 
 create or replace function public.krbl_clear_equipment_transactions()
@@ -10,7 +9,9 @@ security definer
 set search_path = public
 as $$
 declare
-  v_deleted integer := 0;
+  v_transactions_deleted integer := 0;
+  v_excel_rows_deleted integer := 0;
+  v_excel_balance_deleted integer := 0;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -26,10 +27,23 @@ begin
   -- The dashboard requires password re-entry before calling this RPC.
   -- Enforce the admin role here; auth_time is not reliable for password re-entry
   -- when Supabase reuses an existing browser session.
+  -- Clear equipment transactions and both Excel reference/import tables.
+  -- Keep authentication users, KRBL roles, and unrelated application data.
   delete from public.krbl_equipment_transactions;
-  get diagnostics v_deleted = row_count;
+  get diagnostics v_transactions_deleted = row_count;
 
-  return jsonb_build_object('deleted_rows', v_deleted, 'status', 'cleared');
+  delete from public.krbl_equipment_excel_import;
+  get diagnostics v_excel_rows_deleted = row_count;
+
+  delete from public.krbl_equipment_excel_balance_check;
+  get diagnostics v_excel_balance_deleted = row_count;
+
+  return jsonb_build_object(
+    'transactions_deleted', v_transactions_deleted,
+    'excel_import_rows_deleted', v_excel_rows_deleted,
+    'excel_balance_rows_deleted', v_excel_balance_deleted,
+    'status', 'cleared'
+  );
 end;
 $$;
 
