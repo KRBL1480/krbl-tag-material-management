@@ -200,6 +200,20 @@ body{background:#edf3ed}
  <p class="muted">Sign-in is handled by the existing KRBL Supabase project. No new account is required.</p>
 </section>
 <div id="app" class="hide">
+  <section class="panel" style="margin:0 0 14px;border:1px solid #d9a2a0;background:#fffafa">
+   <div class="panelhead"><div><h2 style="color:#9d2924">Admin Data Reset</h2><div class="subhead">Clear all equipment Receive, Issue, Return, Transfer and Cancelled transaction rows. Excel reference, login, user roles and tag-material data remain safe.</div></div><button type="button" id="openClearEquipment" style="background:#a52a25;color:#fff;border:0;padding:10px 16px;border-radius:8px;font-weight:700">Clear All Equipment Data</button></div>
+   <p class="muted" style="margin:8px 0 0">A JSON backup is downloaded first. Admin password re-entry and an exact confirmation phrase are required. The audit log is retained.</p>
+  </section>
+  <div id="clearEquipmentModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:9999;align-items:center;justify-content:center;padding:16px">
+   <form id="clearEquipmentForm" class="panel" style="width:min(100%,480px);box-shadow:0 18px 60px #0004">
+    <h2 style="color:#a52a25">Confirm Equipment Data Reset</h2>
+    <p class="subhead">This permanently deletes all rows from the equipment transaction register for all five equipment types. A JSON backup will be downloaded before deletion.</p>
+    <div class="field"><label for="clearAdminPassword">Re-enter KRBL Admin Password</label><input id="clearAdminPassword" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="clearConfirmText">Type CLEAR EQUIPMENT DATA to confirm</label><input id="clearConfirmText" type="text" autocomplete="off" required></div>
+    <p id="clearEquipmentMessage" class="muted" role="status"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" id="closeClearEquipment" style="background:#64748b">Cancel</button><button type="submit" id="confirmClearEquipment" style="background:#a52a25">Backup & Clear All</button></div>
+   </form>
+  </div>
   <div class="receive-summary" id="receiveSummary"><div><small>TOTAL EQUIPMENT RECEIVED</small><strong id="totalReceivedUnits">0</strong><span>Units received across all equipment categories</span></div><div><small>TOTAL MANDI ISSUED</small><strong id="totalIssuedUnits">0</strong><span>Units issued to all mandis</span></div><div><small>TOTAL MANDI RETURNS</small><strong id="totalReturnedUnits">0</strong><span>Units moved to Department Stock</span></div><div><small>TOTAL TRANSFER OUT</small><strong id="totalTransferOutUnits">0</strong><span>Units sent to other plants / locations</span></div></div><div class="receive-summary stock-balance-summary" id="stockBalanceSummary">
    <div><small>STORE STOCK</small><strong id="summaryStoreStock">0</strong><span>Equipment physically available in store</span></div>
    <div><small>DEPARTMENT RETURN STOCK</small><strong id="summaryDepartmentStock">0</strong><span>Returned equipment held by department</span></div>
@@ -352,6 +366,26 @@ async function load(){setStatus('Loading complete equipment history…');const a
 async function loadExcel(){const [b,i]=await Promise.all([db.from('krbl_equipment_excel_balance_check').select('*').order('item_name'),db.from('krbl_equipment_excel_import').select('sheet_name,source_row,row_data').order('source_row')]);if(b.error)throw b.error;if(i.error)throw i.error;balances=b.data||[];excelRows=i.data||[];}
 async function loadForUser(user){const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin')throw Error('Access denied. This register is currently restricted to the KRBL admin.');balances=[];excelRows=[];await load();$('loginPanel').style.display='none';$('app').classList.remove('hide');$('txDate').value=new Date().toLocaleDateString('en-CA');setStatus('Connected. '+transactions.length+' equipment transactions loaded. Fresh equipment register is ready.');renderAll();}
 async function init(){$('loginPanel').style.display='block';setStatus('Please sign in with your KRBL admin account. If the main dashboard is already open, use the same work email and password here.');try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');if(!window.supabase?.createClient)throw Error('Supabase library did not load. Refresh the page and try again.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const result=await Promise.race([db.auth.getSession(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),3500))]);if(result.timeout){$('loginPanel').style.display='block';setStatus('Automatic session check is taking too long. Sign in below with your KRBL admin email and password.');return;}if(result.error)throw result.error;if(!result.data.session){$('loginPanel').style.display='block';setStatus('Please sign in with your KRBL admin account to load equipment data.');return;}await loadForUser(result.data.session.user);}catch(e){$('loginPanel').style.display='block';setStatus('Unable to load dashboard: '+e.message);}}
+$('openClearEquipment').addEventListener('click',()=>{$('clearEquipmentMessage').textContent='';$('clearAdminPassword').value='';$('clearConfirmText').value='';$('clearEquipmentModal').style.display='flex';});
+$('closeClearEquipment').addEventListener('click',()=>{$('clearEquipmentModal').style.display='none';});
+$('clearEquipmentForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const btn=$('confirmClearEquipment'),msg=$('clearEquipmentMessage');
+ if($('clearConfirmText').value.trim()!=='CLEAR EQUIPMENT DATA'){msg.textContent='Confirmation phrase does not match. No data was changed.';return;}
+ btn.disabled=true;btn.textContent='Verifying admin…';msg.textContent='Re-authenticating admin and preparing backup…';
+ try{
+  const {data:userResult,error:userError}=await db.auth.getUser();if(userError)throw userError;
+  const email=userResult.user?.email;if(!email)throw new Error('Current admin email could not be verified. Please sign in again.');
+  const {error:reauthError}=await db.auth.signInWithPassword({email,password:$('clearAdminPassword').value});if(reauthError)throw new Error('Password verification failed. No data was changed.');
+  const backupText=JSON.stringify({exported_at:new Date().toISOString(),record_type:'KRBL Digital Equipment transaction backup',row_count:transactions.length,transactions},null,2);
+  const blob=new Blob([backupText],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='KRBL_Equipment_Backup_Before_Clear_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  msg.textContent='Backup downloaded. Clearing equipment transaction rows…';btn.textContent='Clearing…';
+  const {data:clearResult,error:clearError}=await db.rpc('krbl_clear_equipment_transactions');if(clearError)throw clearError;
+  await load();renderAll();$('clearEquipmentModal').style.display='none';setStatus('Equipment transaction register cleared. '+Number(clearResult?.deleted_rows||0)+' rows deleted. Excel reference, admin accounts, roles and audit log were preserved.');
+ }catch(err){msg.textContent='Reset not completed: '+err.message;setStatus('Clear operation failed. No success was reported; check the message in the reset window.');}
+ finally{btn.disabled=false;btn.textContent='Backup & Clear All';}
+});
 $('equipmentLogin').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginButton').textContent='Signing in…';try{const {data,error}=await db.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error)throw error;await loadForUser(data.user);}catch(err){setStatus('Sign-in / data loading failed: '+err.message);}finally{$('loginButton').disabled=false;$('loginButton').textContent='Sign In & Load Equipment Data';}});
 function startNew(type){editingId=null;$('txForm').reset();$('txTypeForm').value=type||'receive';updateTransactionForm();switchSection('transactions');$('txFormPanel').scrollIntoView({behavior:'smooth',block:'start'});}
 $('newTop').addEventListener('click',()=>startNew('receive'));document.querySelectorAll('[data-quick]').forEach(b=>b.addEventListener('click',()=>switchSection(b.dataset.quick==='receive'?'receive':'issue')));
