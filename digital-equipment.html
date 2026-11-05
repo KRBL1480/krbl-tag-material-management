@@ -204,13 +204,15 @@ body{background:#edf3ed}
   <div id="clearEquipmentModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:9999;align-items:center;justify-content:center;padding:16px">
    <form id="clearEquipmentForm" class="panel" style="width:min(100%,480px);box-shadow:0 18px 60px #0004">
     <h2 style="color:#a52a25">Confirm Equipment Data Reset</h2>
-    <p class="subhead">This permanently deletes all rows from the equipment transaction register for all five equipment types. A JSON backup will be downloaded before deletion.</p>
+    <p class="subhead">This permanently deletes all equipment transactions and both Excel reference/import tables. A full JSON backup of these three tables will be downloaded before deletion. Login and user roles remain safe.</p>
     <div class="field"><label for="clearAdminPassword">Re-enter KRBL Admin Password</label><input id="clearAdminPassword" type="password" autocomplete="current-password" required></div>
     <div class="field"><label for="clearConfirmText">Type CLEAR EQUIPMENT DATA to confirm</label><input id="clearConfirmText" type="text" autocomplete="off" required></div>
     <p id="clearEquipmentMessage" class="muted" role="status"></p>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" id="closeClearEquipment" style="background:#64748b">Cancel</button><button type="submit" id="confirmClearEquipment" style="background:#a52a25">Backup & Clear All</button></div>
    </form>
   </div>
+
+  <section class="section active" id="section-overview">
   <div class="receive-summary" id="receiveSummary"><div><small>TOTAL EQUIPMENT RECEIVED</small><strong id="totalReceivedUnits">0</strong><span>Units received across all equipment categories</span></div><div><small>TOTAL MANDI ISSUED</small><strong id="totalIssuedUnits">0</strong><span>Units issued to all mandis</span></div><div><small>TOTAL MANDI RETURNS</small><strong id="totalReturnedUnits">0</strong><span>Units moved to Department Stock</span></div><div><small>TOTAL TRANSFER OUT</small><strong id="totalTransferOutUnits">0</strong><span>Units sent to other plants / locations</span></div></div><div class="receive-summary stock-balance-summary" id="stockBalanceSummary">
    <div><small>STORE STOCK</small><strong id="summaryStoreStock">0</strong><span>Equipment physically available in store</span></div>
    <div><small>DEPARTMENT RETURN STOCK</small><strong id="summaryDepartmentStock">0</strong><span>Returned equipment held by department</span></div>
@@ -218,7 +220,6 @@ body{background:#edf3ed}
    <div><small>TOTAL FINAL BALANCE</small><strong id="summaryFinalBalance">0</strong><span>Store stock + Department stock</span></div>
   </div>
   <div class="item-stock-cards" id="itemStockCards" aria-label="Equipment-wise store, department and final stock"></div>
-  <section class="section active" id="section-overview">
    <div class="contentgrid">
     <section class="panel">
      <div class="panelhead"><div><h2>Equipment Stock Overview</h2><div class="subhead">Current availability of all equipment items</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><select id="itemFilter" class="searchinput"><option value="">All Equipment</option><option>HHT Device</option><option>Zebra Printer</option><option>Charger Cable</option><option>Cutter</option><option>Connector Cable</option></select><input id="stockSearch" class="searchinput" placeholder="Search equipment…"></div></div>
@@ -235,18 +236,6 @@ body{background:#edf3ed}
     </div>
     <div class="tablewrap"><table style="min-width:760px"><thead><tr><th>Receipt Date</th><th>Receipt Source</th><th>Batch Received</th><th>FIFO Consumed</th><th>Batch Balance</th><th>Batch Status</th></tr></thead><tbody id="hhtFifoRows"><tr><td colspan="6" class="empty">Loading HHT receipt batches…</td></tr></tbody></table></div>
     <p class="muted" id="hhtFifoNote">FIFO is calculated from active HHT receipt, issue and transfer records. It does not edit or delete any transaction.</p>
-   </section>
-   <section class="panel" style="margin-top:14px">
-    <div class="panelhead"><div><h2>Excel Physical Stock Reference</h2><div class="subhead">Source: Digital System Details.xlsx · Total sheet · reference figures, kept separate from live transaction calculations</div></div><span class="badge">Excel Reference</span></div>
-    <div class="tablewrap"><table style="min-width:850px"><thead><tr><th>Equipment</th><th>Total Received</th><th>Mandi Issue</th><th>GZB</th><th>Total Issue</th><th>Final Balance (Company)</th><th>Total (In Company)</th></tr></thead><tbody>
-     <tr><td class="itemcell">Zebra Printer</td><td>42</td><td>36</td><td>2</td><td>38</td><td>4</td><td><strong>3</strong></td></tr>
-     <tr><td class="itemcell">HHT Device</td><td>41</td><td>35</td><td>2</td><td>37</td><td>4</td><td><strong>1</strong></td></tr>
-     <tr><td class="itemcell">Charger Cable</td><td>11</td><td>9</td><td>2</td><td>11</td><td>0</td><td><strong>2</strong></td></tr>
-     <tr><td class="itemcell">Cutter</td><td>41</td><td>36</td><td>2</td><td>38</td><td>3</td><td><strong>2</strong></td></tr>
-     <tr><td class="itemcell">Connector Cable</td><td>42</td><td>36</td><td>2</td><td>38</td><td>4</td><td><strong>3</strong></td></tr>
-     <tr style="font-weight:900;background:#dcebdc"><td>TOTAL</td><td>177</td><td>152</td><td>10</td><td>162</td><td>15</td><td>11</td></tr>
-    </tbody></table></div>
-    <p class="muted">Important: “Final Balance (Company)” and “Total (In Company)” are separate source columns and are not interchangeable. This reference does not overwrite live Supabase transactions. HHT physical reconciliation: 4 units remain from the latest receipt batch of 30; the Excel “Total (In Company)” reference is 1, so the physical-to-Excel variance is +3. This is a separate reconciliation note and does not modify the source Excel figures or live Supabase transactions.</p>
    </section>
     <div class="sidecol">
      <section class="panel"><div class="panelhead"><div><h2>Equipment Distribution</h2><div class="subhead">By total final balance (Store + Department)</div></div></div><div class="donutrow"><div class="donut" id="donut"><div class="donutcenter"><span id="donutTotal"> </span><small>Stock<br>Mix</small></div></div><div id="legend" class="legend"></div></div></section>
@@ -294,7 +283,7 @@ body{background:#edf3ed}
    </section>
   </section>
   <section class="section" id="section-admin-reset"><div class="pagehead"><div><h2>Admin Settings</h2><p>Restricted controls for equipment register administrators.</p></div></div>  <section class="panel" style="margin:0 0 14px;border:1px solid #d9a2a0;background:#fffafa">
-   <div class="panelhead"><div><h2 style="color:#9d2924">Admin Data Reset</h2><div class="subhead">Clear all equipment Receive, Issue, Return, Transfer and Cancelled transaction rows. Excel reference, login, user roles and tag-material data remain safe.</div></div><button type="button" id="openClearEquipment" style="background:#a52a25;color:#fff;border:0;padding:10px 16px;border-radius:8px;font-weight:700">Clear All Equipment Data</button></div>
+   <div class="panelhead"><div><h2 style="color:#9d2924">Admin Data Reset</h2><div class="subhead">Clear all equipment Receive, Issue, Return, Transfer and Cancelled transactions, plus both imported Excel reference tables. Login, user roles and unrelated KRBL modules remain safe.</div></div><button type="button" id="openClearEquipment" style="background:#a52a25;color:#fff;border:0;padding:10px 16px;border-radius:8px;font-weight:700">Clear All Equipment Data</button></div>
    <p class="muted" style="margin:8px 0 0">A JSON backup is downloaded first. Admin password re-entry and an exact confirmation phrase are required. The audit log is retained.</p>
   </section>
 </section>
@@ -379,12 +368,21 @@ $('clearEquipmentForm').addEventListener('submit',async e=>{
   const {data:userResult,error:userError}=await db.auth.getUser();if(userError)throw userError;
   const email=userResult.user?.email;if(!email)throw new Error('Current admin email could not be verified. Please sign in again.');
   const {error:reauthError}=await db.auth.signInWithPassword({email,password:$('clearAdminPassword').value});if(reauthError)throw new Error('Password verification failed. No data was changed.');
-  const backupText=JSON.stringify({exported_at:new Date().toISOString(),record_type:'KRBL Digital Equipment transaction backup',row_count:transactions.length,transactions},null,2);
+  const [excelImportBackup,excelBalanceBackup]=await Promise.all([
+   fetchAllBackupRows('krbl_equipment_excel_import','id'),
+   fetchAllBackupRows('krbl_equipment_excel_balance_check','item_name')
+  ]);
+  const backupData={exported_at:new Date().toISOString(),record_type:'KRBL Digital Equipment full reset backup',tables:{
+   krbl_equipment_transactions:transactions,
+   krbl_equipment_excel_import:excelImportBackup,
+   krbl_equipment_excel_balance_check:excelBalanceBackup
+  },record_counts:{krbl_equipment_transactions:transactions.length,krbl_equipment_excel_import:excelImportBackup.length,krbl_equipment_excel_balance_check:excelBalanceBackup.length}};
+  const backupText=JSON.stringify(backupData,null,2);
   const blob=new Blob([backupText],{type:'application/json'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='KRBL_Equipment_Backup_Before_Clear_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-  msg.textContent='Backup downloaded. Clearing equipment transaction rows…';btn.textContent='Clearing…';
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='KRBL_Equipment_Full_Backup_Before_Clear_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  msg.textContent='Full backup downloaded. Clearing equipment transactions and Excel reference data…';btn.textContent='Clearing…';
   const {data:clearResult,error:clearError}=await db.rpc('krbl_clear_equipment_transactions');if(clearError)throw clearError;
-  await load();renderAll();$('clearEquipmentModal').style.display='none';setStatus('Equipment transaction register cleared. '+Number(clearResult?.deleted_rows||0)+' rows deleted. Excel reference, admin accounts, roles and audit log were preserved.');
+  await load();renderAll();$('clearEquipmentModal').style.display='none';setStatus('Equipment reset complete. Transactions: '+Number(clearResult?.transactions_deleted||0)+', Excel imported rows: '+Number(clearResult?.excel_import_rows_deleted||0)+', Excel balance rows: '+Number(clearResult?.excel_balance_rows_deleted||0)+' deleted. Admin accounts and roles preserved.');
  }catch(err){msg.textContent='Reset not completed: '+err.message;setStatus('Clear operation failed. No success was reported; check the message in the reset window.');}
  finally{btn.disabled=false;btn.textContent='Backup & Clear All';}
 });
