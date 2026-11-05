@@ -368,21 +368,27 @@ $('clearEquipmentForm').addEventListener('submit',async e=>{
   const {data:userResult,error:userError}=await db.auth.getUser();if(userError)throw userError;
   const email=userResult.user?.email;if(!email)throw new Error('Current admin email could not be verified. Please sign in again.');
   const {error:reauthError}=await db.auth.signInWithPassword({email,password:$('clearAdminPassword').value});if(reauthError)throw new Error('Password verification failed. No data was changed.');
-  const [excelImportBackup,excelBalanceBackup]=await Promise.all([
+  const [excelImportBackup,excelBalanceBackup,auditBackup]=await Promise.all([
    fetchAllBackupRows('krbl_equipment_excel_import','id'),
-   fetchAllBackupRows('krbl_equipment_excel_balance_check','item_name')
+   fetchAllBackupRows('krbl_equipment_excel_balance_check','item_name'),
+   fetchAllBackupRows('krbl_equipment_audit_log','id')
   ]);
   const backupData={exported_at:new Date().toISOString(),record_type:'KRBL Digital Equipment full reset backup',tables:{
    krbl_equipment_transactions:transactions,
    krbl_equipment_excel_import:excelImportBackup,
-   krbl_equipment_excel_balance_check:excelBalanceBackup
-  },record_counts:{krbl_equipment_transactions:transactions.length,krbl_equipment_excel_import:excelImportBackup.length,krbl_equipment_excel_balance_check:excelBalanceBackup.length}};
+   krbl_equipment_excel_balance_check:excelBalanceBackup,
+   krbl_equipment_audit_log:auditBackup
+  },record_counts:{krbl_equipment_transactions:transactions.length,krbl_equipment_excel_import:excelImportBackup.length,krbl_equipment_excel_balance_check:excelBalanceBackup.length,krbl_equipment_audit_log:auditBackup.length}};
   const backupText=JSON.stringify(backupData,null,2);
   const blob=new Blob([backupText],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='KRBL_Equipment_Full_Backup_Before_Clear_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
   msg.textContent='Full backup downloaded. Clearing equipment transactions and Excel reference data…';btn.textContent='Clearing…';
   const {data:clearResult,error:clearError}=await db.rpc('krbl_clear_equipment_transactions');if(clearError)throw clearError;
-  await load();renderAll();$('clearEquipmentModal').style.display='none';setStatus('Equipment reset complete. Transactions: '+Number(clearResult?.transactions_deleted||0)+', Excel imported rows: '+Number(clearResult?.excel_import_rows_deleted||0)+', Excel balance rows: '+Number(clearResult?.excel_balance_rows_deleted||0)+' deleted. Admin accounts and roles preserved.');
+  if(clearResult?.status!=='cleared')throw new Error('Supabase did not confirm the reset. No success was reported.');
+  await load();await loadExcel();renderAll();
+  if(transactions.length!==0)throw new Error('Reset RPC completed but '+transactions.length+' equipment transactions are still visible after reload. Please do not re-enter data; contact admin support.');
+  $('clearEquipmentModal').style.display='none';
+  setStatus('RESET VERIFIED — Receive: '+Number(clearResult.receive_deleted||0)+', Issue: '+Number(clearResult.issue_deleted||0)+', Return: '+Number(clearResult.return_deleted||0)+', Transfer Out: '+Number(clearResult.transfer_out_deleted||0)+', Cancelled: '+Number(clearResult.cancelled_deleted||0)+', Audit: '+Number(clearResult.audit_rows_deleted||0)+', Excel rows: '+(Number(clearResult.excel_import_rows_deleted||0)+Number(clearResult.excel_balance_rows_deleted||0))+'. Live transaction count after reload: 0. Admin accounts and roles preserved.');
  }catch(err){msg.textContent='Reset not completed: '+err.message;setStatus('Clear operation failed. No success was reported; check the message in the reset window.');}
  finally{btn.disabled=false;btn.textContent='Backup & Clear All';}
 });
