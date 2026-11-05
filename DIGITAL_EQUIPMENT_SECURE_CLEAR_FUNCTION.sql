@@ -9,7 +9,13 @@ security definer
 set search_path = public
 as $$
 declare
+  v_receive_deleted integer := 0;
+  v_issue_deleted integer := 0;
+  v_return_deleted integer := 0;
+  v_transfer_deleted integer := 0;
+  v_cancelled_deleted integer := 0;
   v_transactions_deleted integer := 0;
+  v_audit_deleted integer := 0;
   v_excel_rows_deleted integer := 0;
   v_excel_balance_deleted integer := 0;
 begin
@@ -24,13 +30,21 @@ begin
     raise exception 'Admin access required';
   end if;
 
-  -- The dashboard requires password re-entry before calling this RPC.
-  -- Enforce the admin role here; auth_time is not reliable for password re-entry
-  -- when Supabase reuses an existing browser session.
-  -- Clear equipment transactions and both Excel reference/import tables.
-  -- Keep authentication users, KRBL roles, and unrelated application data.
+  -- All movement types are stored in one equipment transaction table.
+  -- Count each type first so the result proves what was removed.
+  select count(*) into v_receive_deleted from public.krbl_equipment_transactions where transaction_type='receive';
+  select count(*) into v_issue_deleted from public.krbl_equipment_transactions where transaction_type='issue';
+  select count(*) into v_return_deleted from public.krbl_equipment_transactions where transaction_type='return';
+  select count(*) into v_transfer_deleted from public.krbl_equipment_transactions where transaction_type='transfer_out';
+  select count(*) into v_cancelled_deleted from public.krbl_equipment_transactions where voided_at is not null;
+
+  -- Clear all equipment movement rows, including cancelled rows.
   delete from public.krbl_equipment_transactions;
   get diagnostics v_transactions_deleted = row_count;
+
+  -- Clear the equipment audit history and both Excel reference/import tables.
+  delete from public.krbl_equipment_audit_log;
+  get diagnostics v_audit_deleted = row_count;
 
   delete from public.krbl_equipment_excel_import;
   get diagnostics v_excel_rows_deleted = row_count;
@@ -39,7 +53,13 @@ begin
   get diagnostics v_excel_balance_deleted = row_count;
 
   return jsonb_build_object(
+    'receive_deleted', v_receive_deleted,
+    'issue_deleted', v_issue_deleted,
+    'return_deleted', v_return_deleted,
+    'transfer_out_deleted', v_transfer_deleted,
+    'cancelled_deleted', v_cancelled_deleted,
     'transactions_deleted', v_transactions_deleted,
+    'audit_rows_deleted', v_audit_deleted,
     'excel_import_rows_deleted', v_excel_rows_deleted,
     'excel_balance_rows_deleted', v_excel_balance_deleted,
     'status', 'cleared'
