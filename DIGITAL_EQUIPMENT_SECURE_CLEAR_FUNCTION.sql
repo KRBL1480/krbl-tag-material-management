@@ -39,17 +39,17 @@ begin
   select count(*) into v_cancelled_deleted from public.krbl_equipment_transactions where voided_at is not null;
 
   -- Clear all equipment movement rows, including cancelled rows.
-  delete from public.krbl_equipment_transactions;
+  delete from public.krbl_equipment_transactions where true;
   get diagnostics v_transactions_deleted = row_count;
 
   -- Clear the equipment audit history and both Excel reference/import tables.
-  delete from public.krbl_equipment_audit_log;
+  delete from public.krbl_equipment_audit_log where true;
   get diagnostics v_audit_deleted = row_count;
 
-  delete from public.krbl_equipment_excel_import;
+  delete from public.krbl_equipment_excel_import where true;
   get diagnostics v_excel_rows_deleted = row_count;
 
-  delete from public.krbl_equipment_excel_balance_check;
+  delete from public.krbl_equipment_excel_balance_check where true;
   get diagnostics v_excel_balance_deleted = row_count;
 
   return jsonb_build_object(
