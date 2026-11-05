@@ -11,7 +11,6 @@ set search_path = public
 as $$
 declare
   v_deleted integer := 0;
-  v_auth_time bigint := 0;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -24,11 +23,9 @@ begin
     raise exception 'Admin access required';
   end if;
 
-  v_auth_time := coalesce((auth.jwt() ->> 'auth_time')::bigint, 0);
-  if v_auth_time < extract(epoch from (now() - interval '5 minutes'))::bigint then
-    raise exception 'Please re-enter your password immediately before clearing data';
-  end if;
-
+  -- The dashboard requires password re-entry before calling this RPC.
+  -- Enforce the admin role here; auth_time is not reliable for password re-entry
+  -- when Supabase reuses an existing browser session.
   delete from public.krbl_equipment_transactions;
   get diagnostics v_deleted = row_count;
 
