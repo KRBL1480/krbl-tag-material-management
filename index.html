@@ -273,7 +273,7 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
    <section class="issue-summary-card"><h3>All Mandis Combined Summary</h3><div class="summary-mandi-name">All mandis matching current year/date filters</div><div class="summary-metrics" id="allMandisSummary"></div></section>
   </div>
   <div class="tablewrap"><table><thead><tr><th>Issue Date</th><th>Mandi Name</th><th>Code</th><th>White Roll Issue</th><th>White Tags</th><th>Black Ribbon Issue</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody id="issueRows"></tbody></table></div>
-  <div class="actions no-print"><button class="secondary" id="exportIssues" type="button">Export Issue History CSV</button><button class="secondary" id="exportAll" type="button">Export All Records CSV</button><button class="secondary" type="button" onclick="window.print()">Print Report</button><button class="primary" id="downloadReport" type="button">Download Shareable HTML Report</button><button class="danger" id="clearHistory" type="button">Clear All Saved Data</button></div>
+  <div class="actions no-print"><button class="secondary" id="exportIssues" type="button">Export Issue History CSV</button><button class="secondary" id="exportAll" type="button">Export All Records CSV</button><button class="secondary" type="button" onclick="window.print()">Print Report</button><div class="report-actions"><button class="primary" id="downloadReport" type="button">Download Shareable HTML Report</button><button class="danger" id="clearHistory" type="button">Clear All Saved Data</button></div></div>
  </section>
 </div>
 <div class="page-view" id="page-receipt-history">
@@ -311,6 +311,8 @@ try{db=JSON.parse(localStorage.getItem(KEY))||db}catch(e){}
 let krblSupabase = null;
 let krblUser = null;
 let krblRole = 'viewer';
+let krblProfile = null;
+let krblWorkPermissions = [];
 let krblCloudReady = false;
 let krblSaveTimer = null;
 const krblInitialIds = { receipts: new Set(), issues: new Set() };
@@ -324,10 +326,10 @@ if(!db.packConversionV2){
 }
 
 function save(){
-  if(krblCloudReady && krblRole==='admin') krblEnsureIds();
+  if(krblCloudReady) krblEnsureIds();
   localStorage.setItem(KEY,JSON.stringify(db));
   render();
-  if(krblCloudReady && krblRole === 'admin'){
+  if(krblCloudReady){
     clearTimeout(krblSaveTimer);
     krblSaveTimer=setTimeout(()=>krblSyncAll().catch(err=>krblSetStatus('Cloud save failed: '+err.message)),250);
   }
@@ -379,13 +381,13 @@ function render(){
 }
 function updatePreview(){const w=n('whitePacks')*27+n('whitePcs'),b=n('blackPacks')*10+n('blackPcs');$('issuePreview').innerHTML=`<strong>Calculated issue:</strong> White rolls: ${w} = ${(w*800).toLocaleString('en-IN')} tags &nbsp; | &nbsp; Black ribbons: ${b} = ${(b*4000).toLocaleString('en-IN')} tags &nbsp; | &nbsp; <strong>Total: ${Math.min(w*800,b*4000).toLocaleString('en-IN')} complete tags (limited by the lower material capacity)</strong>`}
 ['whitePacks','whitePcs','blackPacks','blackPcs'].forEach(id=>$(id).addEventListener('input',updatePreview));
-$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),whiteLoosePcs=n('receiptWhitePcs'),blackLoosePcs=n('receiptBlackPcs'),white=whitePacks*27+whiteLoosePcs,black=blackPacks*10+blackLoosePcs;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={date:$('receiptDate').value,white,black,whitePacks,blackPacks,whiteLoosePcs,blackLoosePcs,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
-$('issueForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const white=n('whitePacks')*27+n('whitePcs'),black=n('blackPacks')*10+n('blackPcs');if(!white&&!black){alert('Enter at least one issue quantity.');return}const rec={date:$('issueDate').value,mandi:$('mandiName').value.trim(),code:$('mandiCode').value.trim(),white,black,by:$('issuedBy').value.trim(),note:$('issueNote').value.trim()};if(editingIssueIndex!==null){db.issues[editingIssueIndex]=rec;editingIssueIndex=null}else{db.issues.push(rec)}save();e.target.reset();$('issueDate').value=today;const ib=$('issueForm').querySelector('[type="submit"]');if(ib)ib.textContent='Save Mandi Issue';updatePreview()});
+$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady&&!krblHasPermission(editingReceiptIndex!==null?'edit_records':'receive')){alert('Your account is not assigned permission to receive or edit material.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),whiteLoosePcs=n('receiptWhitePcs'),blackLoosePcs=n('receiptBlackPcs'),white=whitePacks*27+whiteLoosePcs,black=blackPacks*10+blackLoosePcs;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={date:$('receiptDate').value,white,black,whitePacks,blackPacks,whiteLoosePcs,blackLoosePcs,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
+$('issueForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady&&!krblHasPermission(editingIssueIndex!==null?'edit_records':'issue')){alert('Your account is not assigned permission to issue or edit material.');return}const white=n('whitePacks')*27+n('whitePcs'),black=n('blackPacks')*10+n('blackPcs');if(!white&&!black){alert('Enter at least one issue quantity.');return}const rec={date:$('issueDate').value,mandi:$('mandiName').value.trim(),code:$('mandiCode').value.trim(),white,black,by:$('issuedBy').value.trim(),note:$('issueNote').value.trim()};if(editingIssueIndex!==null){db.issues[editingIssueIndex]=rec;editingIssueIndex=null}else{db.issues.push(rec)}save();e.target.reset();$('issueDate').value=today;const ib=$('issueForm').querySelector('[type="submit"]');if(ib)ib.textContent='Save Mandi Issue';updatePreview()});
 
 let editingIssueIndex = null;
 let editingReceiptIndex = null;
 function editIssue(i){
- if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}
+ if(krblCloudReady&&!krblHasPermission('edit_records')){alert('Edit Transactions permission required.');return}
  const r=db.issues[i]; if(!r) return;
  editingIssueIndex=i;
  $('issueDate').value=r.date||today;
@@ -402,7 +404,7 @@ function editIssue(i){
  if(typeof updatePreview==='function') updatePreview();
 }
 function editReceipt(i){
- if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}
+ if(krblCloudReady&&!krblHasPermission('edit_records')){alert('Edit Transactions permission required.');return}
  const r=db.receipts[i]; if(!r) return;
  editingReceiptIndex=i;
  $('receiptDate').value=r.date||today;
@@ -416,8 +418,8 @@ function editReceipt(i){
  form.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-function deleteIssue(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this issue record?')){db.issues.splice(i,1);save()}}
-function deleteReceipt(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this receipt record?')){db.receipts.splice(i,1);save()}}
+function deleteIssue(i){if(krblCloudReady&&!krblHasPermission('cancel_records')){alert('Cancel Transactions permission required.');return}if(confirm('Delete this issue record?')){db.issues.splice(i,1);save()}}
+function deleteReceipt(i){if(krblCloudReady&&!krblHasPermission('cancel_records')){alert('Cancel Transactions permission required.');return}if(confirm('Delete this receipt record?')){db.receipts.splice(i,1);save()}}
 window.editIssue=editIssue;window.editReceipt=editReceipt;window.deleteIssue=deleteIssue;window.deleteReceipt=deleteReceipt;
 ['search','fromDate','toDate','issueYear'].forEach(id=>$(id).addEventListener('input',render));
 $('summaryMandi').addEventListener('change',render);
@@ -442,7 +444,7 @@ function downloadShareableReport(){
 }
 $('downloadReport')?.addEventListener('click',downloadShareableReport);
 
-$('clearHistory').onclick=()=>{if(krblRole!=='admin' && krblCloudReady){alert('Admin access required.');return}if(confirm('This will permanently delete all receipt and issue history saved in this browser. Export a backup first. Continue?')){db={receipts:[],issues:[]};save()}};
+$('clearHistory').onclick=()=>{if(krblCloudReady&&krblRole!=='admin'){alert('Admin access required.');return}if(confirm('This will permanently delete all receipt and issue history saved in this browser. Export a backup first. Continue?')){db={receipts:[],issues:[]};save()}};
 $('backupJson').onclick=()=>{const payload={app:'KRBL Consumables Issue Register',version:1,exportedAt:new Date().toISOString(),receipts:db.receipts,issues:db.issues};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KRBL_Consumables_Backup_'+today+'.json';a.click();URL.revokeObjectURL(a.href)};
 $('restoreJsonBtn').onclick=()=>$('restoreJsonFile').click();
 $('restoreJsonFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.receipts)||!Array.isArray(data.issues))throw new Error('This backup file does not contain the expected receipt and issue history.');if(!confirm('Restore this backup? Current browser records will be replaced by the backup records. Download a backup of current records first if needed.'))return;db={receipts:data.receipts,issues:data.issues};save();alert('Backup restored successfully.');}catch(err){alert('Could not restore backup: '+err.message)}finally{e.target.value=''}});
@@ -488,45 +490,85 @@ function krblIssueFromRow(r){
 async function krblLoadCloud(){
   if(!krblSupabase || !krblUser) return;
   krblSetStatus('Cloud: loading shared records…');
-  const [rr,ii,roleResult]=await Promise.all([
+  const [rr,ii,profileResult,roleResult]=await Promise.all([
     krblSupabase.from('krbl_material_receipts').select('*').order('receipt_date',{ascending:false}),
     krblSupabase.from('krbl_mandi_issues').select('*').order('issue_date',{ascending:false}),
+    krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,role,area,active,assigned_mandis,work_permissions').eq('user_id',krblUser.id).maybeSingle(),
     krblSupabase.from('krbl_user_roles').select('role').eq('user_id',krblUser.id).maybeSingle()
   ]);
   if(rr.error) throw rr.error;
   if(ii.error) throw ii.error;
+  if(profileResult.error) throw profileResult.error;
   if(roleResult.error) throw roleResult.error;
-  krblRole=roleResult.data?.role||'viewer';
+  krblProfile=profileResult.data||null;
+  if(krblProfile?.active===false) throw new Error('This employee account is inactive. Contact KRBL Admin.');
+  krblRole=krblProfile?.role||roleResult.data?.role||'viewer';
+  krblWorkPermissions=Array.isArray(krblProfile?.work_permissions)?krblProfile.work_permissions:[];
   db={receipts:(rr.data||[]).map(krblReceiptFromRow),issues:(ii.data||[]).map(krblIssueFromRow),packConversionV2:true};
   krblEnsureIds();
+  krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));
+  krblInitialIds.issues=new Set(db.issues.map(r=>r.id));
+  krblBaseline.receipts=new Map(db.receipts.map(r=>[r.id,JSON.stringify(r)]));
+  krblBaseline.issues=new Map(db.issues.map(r=>[r.id,JSON.stringify(r)]));
   localStorage.setItem(KEY,JSON.stringify(db));
   krblCloudReady=true;
-  document.body.classList.toggle('krbl-viewer',krblRole!=='admin');
+  krblApplyPermissions();
   const gate=document.getElementById('krblAuthGate'); if(gate) gate.style.display='none';
-  krblSetStatus('Cloud connected • '+(krblRole==='admin'?'Admin':'Viewer'));
+  krblSetStatus('Cloud connected • '+krblRole.toUpperCase()+' • '+(krblProfile?.full_name||krblUser.email||'Employee'));
   render();
 }
+const krblBaseline={receipts:new Map(),issues:new Map()};
+function krblHasPermission(permission){
+  return krblRole==='admin'||krblWorkPermissions.includes(permission);
+}
+function krblCanAccessMandi(code,name){
+  if(krblRole==='admin') return true;
+  const assigned=Array.isArray(krblProfile?.assigned_mandis)?krblProfile.assigned_mandis:[];
+  return assigned.some(m=>{
+    if(typeof m==='string') return m.toUpperCase()===(String(code||'').toUpperCase())||m.toUpperCase()===(String(name||'').toUpperCase());
+    if(m?.code && code) return String(m.code).toUpperCase()===String(code).toUpperCase();
+    return !m?.code && String(m?.name||'').toUpperCase()===String(name||'').toUpperCase();
+  });
+}
+function krblApplyPermissions(){
+  const body=document.body;
+  body.classList.toggle('krbl-viewer',!krblHasPermission('receive')&&!krblHasPermission('issue'));
+  body.classList.toggle('krbl-no-receive',!krblHasPermission('receive'));
+  body.classList.toggle('krbl-no-issue',!krblHasPermission('issue'));
+  body.classList.toggle('krbl-no-edit',!krblHasPermission('edit_records')&&!krblHasPermission('cancel_records'));
+  body.classList.toggle('krbl-no-reports',!krblHasPermission('reports'));
+  body.classList.toggle('krbl-no-backup',krblRole!=='admin');
+  body.classList.toggle('krbl-no-history',!krblHasPermission('view_records'));
+  const adminButton=document.getElementById('krblAdminOpen');
+  if(adminButton) adminButton.style.display=krblRole==='admin'?'block':'none';
+  const equipmentButton=document.getElementById('digitalEquipmentNav');
+  if(equipmentButton) equipmentButton.style.display=krblRole==='admin'?'':'none';
+}
 async function krblSyncAll(){
-  if(!krblSupabase || !krblCloudReady || krblRole!=='admin') return;
-  // Keep stable IDs so edits update the same cloud record.
-  const receiptRows=db.receipts.map(krblReceiptToRow);
-  const issueRows=db.issues.map(krblIssueToRow);
+  if(!krblSupabase||!krblCloudReady) return;
+  const currentR=new Map(db.receipts.map(r=>[r.id,r]));
+  const currentI=new Map(db.issues.map(r=>[r.id,r]));
+  const changedR=[...currentR.values()].filter(r=>krblBaseline.receipts.get(r.id)!==JSON.stringify(r));
+  const changedI=[...currentI.values()].filter(r=>krblBaseline.issues.get(r.id)!==JSON.stringify(r));
+  const removedR=[...krblBaseline.receipts.keys()].filter(id=>!currentR.has(id));
+  const removedI=[...krblBaseline.issues.keys()].filter(id=>!currentI.has(id));
+  if(changedR.length&&!krblHasPermission('receive')&&!krblHasPermission('edit_records')) throw new Error('Receive / Edit permission required.');
+  if(changedI.length&&!krblHasPermission('issue')&&!krblHasPermission('edit_records')) throw new Error('Issue / Edit permission required.');
+  if(removedR.length&&!krblHasPermission('cancel_records')) throw new Error('Cancel permission required for receipt records.');
+  if(removedI.length&&!krblHasPermission('cancel_records')) throw new Error('Cancel permission required for issue records.');
   const [rRes,iRes]=await Promise.all([
-    receiptRows.length?krblSupabase.from('krbl_material_receipts').upsert(receiptRows):Promise.resolve({error:null}),
-    issueRows.length?krblSupabase.from('krbl_mandi_issues').upsert(issueRows):Promise.resolve({error:null})
+    changedR.length?krblSupabase.from('krbl_material_receipts').upsert(changedR.map(krblReceiptToRow)):Promise.resolve({error:null}),
+    changedI.length?krblSupabase.from('krbl_mandi_issues').upsert(changedI.map(krblIssueToRow)):Promise.resolve({error:null})
   ]);
   if(rRes.error) throw rRes.error;
   if(iRes.error) throw iRes.error;
-  // Delete only rows previously loaded by this session and subsequently removed locally.
-  const oldReceipts=Array.from(krblInitialIds.receipts);
-  const oldIssues=Array.from(krblInitialIds.issues);
-  const nowR=new Set(db.receipts.map(r=>r.id)), nowI=new Set(db.issues.map(r=>r.id));
-  const delR=oldReceipts.filter(id=>!nowR.has(id)), delI=oldIssues.filter(id=>!nowI.has(id));
-  if(delR.length){const x=await krblSupabase.from('krbl_material_receipts').delete().in('id',delR);if(x.error)throw x.error;}
-  if(delI.length){const x=await krblSupabase.from('krbl_mandi_issues').delete().in('id',delI);if(x.error)throw x.error;}
+  for(const id of removedR){const x=await krblSupabase.from('krbl_material_receipts').delete().eq('id',id);if(x.error)throw x.error;}
+  for(const id of removedI){const x=await krblSupabase.from('krbl_mandi_issues').delete().eq('id',id);if(x.error)throw x.error;}
+  krblBaseline.receipts=new Map(db.receipts.map(r=>[r.id,JSON.stringify(r)]));
+  krblBaseline.issues=new Map(db.issues.map(r=>[r.id,JSON.stringify(r)]));
   krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));
   krblInitialIds.issues=new Set(db.issues.map(r=>r.id));
-  krblSetStatus('Cloud saved • Admin');
+  krblSetStatus('Cloud saved • '+krblRole.toUpperCase());
 }
 async function krblSignIn(){
   if(!krblSupabase){krblAuthMessage('Supabase connection is not configured. Contact KRBL Admin.');return;}
@@ -617,6 +659,12 @@ render();
     const buttons = Array.from(document.querySelectorAll('.sidebar [data-page]'));
     if(!views.length || !buttons.length) return;
     function showPage(id){
+      if(krblCloudReady){
+        if(id==='receipt'&&!krblHasPermission('receive')) id='dashboard';
+        if(id==='issue'&&!krblHasPermission('issue')) id='dashboard';
+        if((id==='issue-history'||id==='receipt-history')&&!krblHasPermission('view_records')) id='dashboard';
+        if(id==='backup'&&krblRole!=='admin') id='dashboard';
+      }
       views.forEach(v => v.classList.toggle('active', v.id === 'page-' + id));
       buttons.forEach(b => b.classList.toggle('active', b.dataset.page === id));
       try { sessionStorage.setItem('krblActivePage_v2', id); } catch(e) {}
@@ -653,7 +701,13 @@ render();
     #krblAdminModal .krblPermissionGrid input{width:auto;margin:2px 0 0;accent-color:#008044}
     #krblAdminModal .krblPermissionGrid small{display:block;font-weight:400;color:#65736a}
     @media(max-width:600px){#krblAdminModal .krblPermissionGrid{grid-template-columns:1fr}}
-    body.krbl-viewer #krblAdminOpen{display:none!important}
+    body.krbl-no-receive #page-receipt form,body.krbl-no-issue #page-issue form{display:none!important}
+body.krbl-no-edit .action-buttons{display:none!important}
+body.krbl-no-reports .report-actions{display:none!important}
+body.krbl-no-backup [data-page="backup"]{display:none!important}
+body.krbl-no-issue [data-page="issue"],body.krbl-no-receive [data-page="receipt"]{display:none!important}
+body.krbl-no-history [data-page="issue-history"],body.krbl-no-history [data-page="receipt-history"]{display:none!important}
+body.krbl-viewer #krblAdminOpen{display:none!important}
     @media(max-width:600px){#krblAdminModal .adminGrid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
