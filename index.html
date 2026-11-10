@@ -152,19 +152,16 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <div id="krblAuthCard">
     <h2>KRBL Material Issue Management</h2>
     <p>Sign in to access the shared team dashboard. Your original dashboard design and calculations are retained.</p>
-    <label for="krblEmail">Work email</label>
-    <input id="krblEmail" type="email" autocomplete="username" placeholder="name@company.com">
+    <label for="krblIdentifier">Employee ID / Username</label>
+    <input id="krblIdentifier" type="text" autocomplete="username" placeholder="e.g. EMP001 or GOVIND01">
     <label for="krblPassword">Password</label>
     <input id="krblPassword" type="password" autocomplete="current-password" placeholder="Password">
-    <div class="auth-actions">
-      <button id="krblSignIn" type="button">Sign in</button>
-      <button id="krblSignUp" class="secondary" type="button">Create account</button>
-      <button id="krblForgotPassword" class="link-button" type="button">Forgot password?</button>
-    </div>
+    <div class="auth-actions"><button id="krblSignIn" type="button">Sign in</button></div>
+    <p style="font-size:12px;color:#596658">Employee accounts are created only by KRBL Admin. No email or self-sign-up is required.</p>
     <label id="krblNewPasswordLabel" for="krblNewPassword" style="display:none">New password (minimum 8 characters)</label>
     <input id="krblNewPassword" type="password" autocomplete="new-password" placeholder="Enter new password">
     <button id="krblSetNewPassword" type="button">Set new password</button>
-    <p id="krblAuthMessage">Sign in with your team account or create a new account. New accounts are Viewer by default.</p>
+    <p id="krblAuthMessage">Enter your Employee ID or Username and password provided by KRBL Admin.</p>
   </div>
 </div>
 <div id="krblCloudStatus">Cloud: not connected</div>
@@ -532,12 +529,16 @@ async function krblSyncAll(){
   krblSetStatus('Cloud saved • Admin');
 }
 async function krblSignIn(){
-  if(!krblSupabase){krblAuthMessage('Please fill Supabase URL and publishable key in supabase-config.js, then reload.');return;}
-  const email=document.getElementById('krblEmail').value.trim();
+  if(!krblSupabase){krblAuthMessage('Supabase connection is not configured. Contact KRBL Admin.');return;}
+  const identifier=document.getElementById('krblIdentifier').value.trim();
   const password=document.getElementById('krblPassword').value;
-  if(!email||!password){krblAuthMessage('Enter your work email and password.');return;}
-  const {data,error}=await krblSupabase.auth.signInWithPassword({email,password});
-  if(error){krblAuthMessage(error.message);return;}
+  if(!identifier||!password){krblAuthMessage('Enter Employee ID or Username and password.');return;}
+  krblAuthMessage('Verifying employee account…');
+  const {data,error}=await krblSupabase.functions.invoke('employee-login',{body:{identifier,password}});
+  if(error||data?.error){krblAuthMessage(data?.error||error?.message||'Login failed.');return;}
+  if(!data?.session?.access_token||!data?.session?.refresh_token){krblAuthMessage('Login service returned an incomplete session. Contact KRBL Admin.');return;}
+  const {error:sessionError}=await krblSupabase.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+  if(sessionError){krblAuthMessage('Could not start session: '+sessionError.message);return;}
   krblUser=data.user;
   try{
     await krblLoadCloud();
@@ -572,8 +573,6 @@ async function krblSetNewPassword(){
   document.getElementById('krblPassword').style.display='block';
   document.querySelector('label[for="krblPassword"]').style.display='block';
   document.getElementById('krblSignIn').style.display='inline-block';
-  document.getElementById('krblSignUp').style.display='inline-block';
-  document.getElementById('krblForgotPassword').style.display='inline-block';
   krblAuthMessage('Password updated successfully. You can now continue using the dashboard.');
 }
 async function krblLogout(){
@@ -589,8 +588,6 @@ async function krblLogout(){
   }
   krblSupabase=window.supabase.createClient(cfg.url,cfg.publishableKey);
   document.getElementById('krblSignIn').addEventListener('click',krblSignIn);
-  document.getElementById('krblSignUp').addEventListener('click',krblSignUp);
-  document.getElementById('krblForgotPassword').addEventListener('click',krblForgotPassword);
   document.getElementById('krblSetNewPassword').addEventListener('click',krblSetNewPassword);
   document.getElementById('krblLogoutBtn').addEventListener('click',krblLogout);
   krblSupabase.auth.getSession().then(async ({data})=>{
@@ -601,8 +598,6 @@ async function krblLogout(){
     if(event==='PASSWORD_RECOVERY'){
       const gate=document.getElementById('krblAuthGate'); if(gate)gate.style.display='flex';
       document.getElementById('krblSignIn').style.display='none';
-      document.getElementById('krblSignUp').style.display='none';
-      document.getElementById('krblForgotPassword').style.display='none';
       document.getElementById('krblPassword').style.display='none';
       document.querySelector('label[for="krblPassword"]').style.display='none';
       document.getElementById('krblNewPassword').style.display='block';
@@ -662,7 +657,7 @@ render();
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="krblAdminTitle">KRBL User Management</h2><button type="button" class="secondary" id="krblAdminClose">Close</button></div>
       <p id="krblAdminWho"></p>
-      <div class="notice" style="margin:12px 0">Create User + Invite sends a secure Supabase invitation, then saves the employee role and assigned mandis. It requires the invite-employee Edge Function to be deployed in Supabase with its server-side service-role secret.</div>
+      <div class="notice" style="margin:12px 0">Admin creates an employee login using Employee ID, Username and an initial password. No email invitation is sent.</div>
       <div class="adminGrid" style="margin:14px 0">
         <button type="button" id="krblOfficeTab">OFFICE — Users, roles & activity</button>
         <button type="button" id="krblTeamTab" class="secondary">TEAM — Mandi operations</button>
@@ -685,7 +680,8 @@ render();
         <input id="krblAdminUid" type="hidden" value="">
         <label class="adminField">Employee name<input id="krblAdminName" placeholder="e.g. Rajesh Kumar"></label>
         <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
-        <label class="adminField">Email address<input id="krblAdminEmail" type="email" placeholder="name@company.com"></label>
+        <label class="adminField">Username<input id="krblAdminUsername" autocomplete="off" placeholder="e.g. GOVIND01"></label>
+        <label class="adminField">Initial Password<input id="krblAdminInitialPassword" type="password" autocomplete="new-password" placeholder="Minimum 10 characters"></label>
         <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select></label>
         <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
         <label class="adminField adminWide">Assigned mandis — scroll and select one or more
@@ -699,7 +695,7 @@ render();
           <span style="font-weight:400;color:#596658">Select All Mandis assigns every mandi currently listed. You can also select individual mandis with Ctrl-click.</span>
         </label>
         <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
-        <div class="adminField" style="justify-content:end;gap:8px"><button id="krblAdminInvite" type="button">Create User + Send Invite</button><button id="krblAdminSave" type="button" class="secondary">Save existing profile</button></div>
+        <div class="adminField" style="justify-content:end;gap:8px"><button id="krblAdminInvite" type="button">Create Employee Account</button><button id="krblAdminSave" type="button" class="secondary">Save existing profile</button></div>
       </div>
       <div id="krblAdminMsg" role="status"></div>
       <h3 style="margin-top:22px">Registered employees</h3>
@@ -752,22 +748,22 @@ render();
   el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
   el('krblAdminInvite').addEventListener('click',async()=>{
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
-    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
-    const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
+    const name=el('krblAdminName').value.trim();
+    const empId=el('krblAdminEmpId').value.trim().toUpperCase();
+    const username=el('krblAdminUsername').value.trim().toLowerCase();
+    const password=el('krblAdminInitialPassword').value;
+    const role=el('krblAdminRole').value, area=el('krblAdminArea').value;
     const assigned_mandis=getSelectedMandis();
-    if(!name){msg('Enter employee name.');return;}
-    if(!email||!/^\\S+@\\S+\\.\\S+$/.test(email)){msg('Enter a valid employee email.');return;}
-    if(!['office','team','viewer'].includes(role)){msg('For new invitations choose Office, Team or Viewer. Keep Super Admin assignment restricted to an existing administrator.');return;}
+    if(!name||!empId||!username||!password){msg('Enter name, Employee ID, Username and initial password.');return;}
+    if(password.length<10){msg('Initial password must contain at least 10 characters.');return;}
+    if(!['office','team','viewer'].includes(role)){msg('New employee role must be Office, Team or Viewer. Super Admin cannot be assigned here.');return;}
     if(role==='team'&&!assigned_mandis.length){msg('Select at least one mandi for a Team employee.');return;}
-    if(!active){msg('New invitations must start as Active. Deactivate the profile after invitation if required.');return;}
-    const {data:{session}}=await krblSupabase.auth.getSession();
-    if(!session){msg('Please sign in again.');return;}
-    msg('Sending secure invitation and saving assigned access…');
-    const {data,error}=await krblSupabase.functions.invoke('invite-employee',{body:{full_name:name,employee_id:empId||null,email,role,area,assigned_mandis}});
-    if(error){msg('Invitation failed: '+(error.message||String(error))+'. Confirm invite-employee Edge Function is deployed and configured in Supabase.');return;}
-    if(data?.error){msg('Invitation failed: '+data.error);return;}
+    msg('Creating employee account…');
+    const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'create',full_name:name,employee_id:empId,username,password,role,area,assigned_mandis}});
+    if(error||data?.error){msg('Account creation failed: '+(data?.error||error?.message||'Unknown error'));return;}
     el('krblAdminUid').value=data.user_id||'';
-    msg('Invitation sent to '+email+'. Profile and mandi assignment saved. Ask the employee to open the invitation email and set their password.');
+    el('krblAdminInitialPassword').value='';
+    msg('Employee account created. Employee ID: '+data.employee_id+' | Username: '+data.username+'. No email was sent. Share the initial password securely.');
     await loadProfiles();
   });
   el('krblAdminSave').addEventListener('click',async()=>{
