@@ -7,9 +7,9 @@ create unique index if not exists krbl_team_profiles_username_lower_uidx
   on public.krbl_team_profiles (lower(username))
   where username is not null and btrim(username) <> '';
 
-create index if not exists krbl_team_profiles_employee_id_lower_idx
+create unique index if not exists krbl_team_profiles_employee_id_lower_uidx
   on public.krbl_team_profiles (lower(employee_id))
-  where employee_id is not null;
+  where employee_id is not null and btrim(employee_id) <> '';
 
 alter table public.krbl_user_roles drop constraint if exists krbl_user_roles_role_check;
 alter table public.krbl_user_roles add constraint krbl_user_roles_role_check
