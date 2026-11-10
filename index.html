@@ -544,7 +544,8 @@ function krblApplyPermissions(){
   const adminButton=document.getElementById('krblAdminOpen');
   if(adminButton) adminButton.style.display=krblRole==='admin'?'block':'none';
   const equipmentButton=document.getElementById('digitalEquipmentNav');
-  if(equipmentButton) equipmentButton.style.display=krblRole==='admin'?'':'none';
+  const hasEquipmentWork=krblRole==='admin'||['equipment_receive','equipment_issue','equipment_return','equipment_transfer','equipment_view','equipment_edit','equipment_cancel','equipment_reports'].some(p=>krblWorkPermissions.includes(p));
+  if(equipmentButton) equipmentButton.style.display=hasEquipmentWork?'':'none';
 }
 async function krblSyncAll(){
   if(!krblSupabase||!krblCloudReady) return;
