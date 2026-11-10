@@ -192,13 +192,13 @@ body{background:#edf3ed}
  <div id="status" class="status"><span class="dot"></span><span id="statusText">Checking sign-in and equipment register…</span></div>
  <section id="loginPanel" class="panel" style="max-width:520px;margin:18px auto;display:none">
  <h2>Sign in to KRBL Equipment Register</h2>
- <p class="subhead">Use the same KRBL admin email and password used on the Main Dashboard.</p>
+ <p class="subhead">Use your KRBL Employee ID / Username and password assigned by KRBL Admin.</p>
  <form id="equipmentLogin" style="margin-top:14px">
-  <div class="field"><label for="loginEmail">Work Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+  <div class="field"><label for="loginEmail">Employee ID / Username</label><input id="loginEmail" type="text" autocomplete="username" placeholder="e.g. D800291 or PARVEEN02" required></div>
   <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
   <button id="loginButton" type="submit">Sign In & Load Equipment Data</button>
  </form>
- <p class="muted">Sign-in is handled by the existing KRBL Supabase project. No new account is required.</p>
+ <p class="muted">Use the same employee account as the Main Dashboard. No separate equipment account is required.</p>
 </section>
 <div id="app" class="hide">
   <div id="clearEquipmentModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:9999;align-items:center;justify-content:center;padding:16px">
@@ -355,8 +355,44 @@ function renderReports(){const data=stockData();$('reportRows').textContent=num(
 function renderAll(){renderStock();renderHhtFifo();renderTransactions();renderReports();renderRecent();if(activeSection==='verify')renderVerification();}
 async function load(){setStatus('Loading complete equipment history…');const all=[],pageSize=50;for(let offset=0;;offset+=pageSize){const {data,error}=await db.from('krbl_equipment_transactions').select('*').order('transaction_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+pageSize-1);if(error)throw error;const batch=data||[];all.push(...batch);if(batch.length<pageSize)break;}transactions=all;}
 async function loadExcel(){const [b,i]=await Promise.all([db.from('krbl_equipment_excel_balance_check').select('*').order('item_name'),db.from('krbl_equipment_excel_import').select('sheet_name,source_row,row_data').order('source_row')]);if(b.error)throw b.error;if(i.error)throw i.error;balances=b.data||[];excelRows=i.data||[];}
-async function loadForUser(user){const {data:role,error:re}=await db.from('krbl_user_roles').select('role').eq('user_id',user.id).maybeSingle();if(re)throw re;if(role?.role!=='admin')throw Error('Access denied. This register is currently restricted to the KRBL admin.');balances=[];excelRows=[];await load();$('loginPanel').style.display='none';$('app').classList.remove('hide');$('txDate').value=new Date().toLocaleDateString('en-CA');setStatus('Connected. '+transactions.length+' equipment transactions loaded. Fresh equipment register is ready.');renderAll();}
-async function init(){$('loginPanel').style.display='block';setStatus('Please sign in with your KRBL admin account. If the main dashboard is already open, use the same work email and password here.');try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');if(!window.supabase?.createClient)throw Error('Supabase library did not load. Refresh the page and try again.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const result=await Promise.race([db.auth.getSession(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),3500))]);if(result.timeout){$('loginPanel').style.display='block';setStatus('Automatic session check is taking too long. Sign in below with your KRBL admin email and password.');return;}if(result.error)throw result.error;if(!result.data.session){$('loginPanel').style.display='block';setStatus('Please sign in with your KRBL admin account to load equipment data.');return;}await loadForUser(result.data.session.user);}catch(e){$('loginPanel').style.display='block';setStatus('Unable to load dashboard: '+e.message);}}
+let equipmentProfile=null,equipmentPermissions=[];
+function hasEquipmentPermission(key){return equipmentProfile?.role==='admin'||equipmentPermissions.includes(key);}
+function canEquipmentMandi(code,name){if(equipmentProfile?.role==='admin')return true;const a=Array.isArray(equipmentProfile?.assigned_mandis)?equipmentProfile.assigned_mandis:[];return a.some(m=>typeof m==='string'?(m.toUpperCase()===String(code||'').toUpperCase()||m.toUpperCase()===String(name||'').toUpperCase()):(m?.code?String(m.code).toUpperCase()===String(code||'').toUpperCase():String(m?.name||'').toUpperCase()===String(name||'').toUpperCase()));}
+function applyEquipmentPermissions(){
+ const p=equipmentProfile||{},body=document.body;
+ const perms={receive:hasEquipmentPermission('equipment_receive'),issue:hasEquipmentPermission('equipment_issue'),ret:hasEquipmentPermission('equipment_return'),transfer:hasEquipmentPermission('equipment_transfer'),view:hasEquipmentPermission('equipment_view'),edit:hasEquipmentPermission('equipment_edit'),cancel:hasEquipmentPermission('equipment_cancel'),reports:hasEquipmentPermission('equipment_reports')};
+ document.querySelectorAll('[data-section="receive"]').forEach(x=>x.style.display=perms.receive?'':'none');
+ document.querySelectorAll('[data-section="issue"]').forEach(x=>x.style.display=perms.issue?'':'none');
+ document.querySelectorAll('[data-section="transfer"]').forEach(x=>x.style.display=perms.transfer?'':'none');
+ document.querySelectorAll('[data-section="transactions"],[data-section="verify"]').forEach(x=>x.style.display=perms.view?'':'none');
+ document.querySelectorAll('[data-section="reports"],#printBtn').forEach(x=>x.style.display=perms.reports?'':'none');
+ document.querySelectorAll('[data-section="admin-reset"],#openClearEquipment').forEach(x=>x.style.display=p.role==='admin'?'':'none');
+ document.querySelectorAll('[data-edit]').forEach(x=>x.style.display=perms.edit?'':'none');
+ document.querySelectorAll('[data-cancel]').forEach(x=>x.style.display=perms.cancel?'':'none');
+ document.querySelectorAll('[data-quick]').forEach(x=>{const k=x.dataset.quick;x.style.display=(k==='receive'?perms.receive:perms.issue)?'':'none';});
+ body.dataset.equipmentRole=p.role||'viewer';
+}
+async function loadForUser(user){
+ const [profileResult,roleResult]=await Promise.all([
+  db.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,role,area,active,assigned_mandis,work_permissions').eq('user_id',user.id).maybeSingle(),
+  db.from('krbl_user_roles').select('role').eq('user_id',user.id).maybeSingle()
+ ]);
+ if(profileResult.error)throw profileResult.error;if(roleResult.error)throw roleResult.error;
+ equipmentProfile=profileResult.data||{role:roleResult.data?.role||'viewer',active:true,assigned_mandis:[],work_permissions:[]};
+ if(equipmentProfile.active===false)throw Error('Employee account is inactive. Contact KRBL Admin.');
+ equipmentPermissions=Array.isArray(equipmentProfile.work_permissions)?equipmentProfile.work_permissions:[];
+ if(equipmentProfile.role==='admin')equipmentPermissions=['equipment_view','equipment_receive','equipment_issue','equipment_return','equipment_transfer','equipment_edit','equipment_cancel','equipment_reports'];
+ if(!equipmentPermissions.some(x=>['equipment_view','equipment_receive','equipment_issue','equipment_return','equipment_transfer'].includes(x)))throw Error('No Equipment Register work has been assigned to this employee. Ask KRBL Admin to assign equipment permissions.');
+ balances=[];excelRows=[];
+ if(equipmentProfile.role==='admin'){await loadExcel();}
+ await load();
+ $('loginPanel').style.display='none';$('app').classList.remove('hide');
+ $('txDate').value=new Date().toLocaleDateString('en-CA');
+ applyEquipmentPermissions();
+ setStatus('Connected • '+(equipmentProfile.full_name||equipmentProfile.username||user.email)+' • '+transactions.length+' equipment transactions loaded.');
+ renderAll();
+}
+async function init(){$('loginPanel').style.display='block';setStatus('Sign in with your KRBL Employee ID / Username and password.');try{if(!window.KRBL_SUPABASE_CONFIG?.url||!window.KRBL_SUPABASE_CONFIG?.publishableKey)throw Error('Supabase browser configuration is missing.');if(!window.supabase?.createClient)throw Error('Supabase library did not load. Refresh the page and try again.');db=window.supabase.createClient(window.KRBL_SUPABASE_CONFIG.url,window.KRBL_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const result=await Promise.race([db.auth.getSession(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),3500))]);if(result.timeout){$('loginPanel').style.display='block';setStatus('Automatic session check is taking too long. Sign in below with your Employee ID / Username.');return;}if(result.error)throw result.error;if(!result.data.session){$('loginPanel').style.display='block';setStatus('Please sign in with your KRBL admin account to load equipment data.');return;}await loadForUser(result.data.session.user);}catch(e){$('loginPanel').style.display='block';setStatus('Unable to load dashboard: '+e.message);}}
 $('openClearEquipment').addEventListener('click',()=>{$('clearEquipmentMessage').textContent='';$('clearAdminPassword').value='';$('clearConfirmText').value='';$('clearEquipmentModal').style.display='flex';});
 $('closeClearEquipment').addEventListener('click',()=>{$('clearEquipmentModal').style.display='none';});
 $('clearEquipmentForm').addEventListener('submit',async e=>{
@@ -392,7 +428,7 @@ $('clearEquipmentForm').addEventListener('submit',async e=>{
  }catch(err){msg.textContent='Reset not completed: '+err.message;setStatus('Clear operation failed. No success was reported; check the message in the reset window.');}
  finally{btn.disabled=false;btn.textContent='Backup & Clear All';}
 });
-$('equipmentLogin').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginButton').textContent='Signing in…';try{const {data,error}=await db.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error)throw error;await loadForUser(data.user);}catch(err){setStatus('Sign-in / data loading failed: '+err.message);}finally{$('loginButton').disabled=false;$('loginButton').textContent='Sign In & Load Equipment Data';}});
+$('equipmentLogin').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginButton').textContent='Signing in…';try{const {data,error}=await db.functions.invoke('employee-login',{body:{identifier:$('loginEmail').value.trim(),password:$('loginPassword').value}});if(error||data?.error)throw new Error(data?.error||error?.message||'Login failed.');if(!data?.session?.access_token||!data?.session?.refresh_token)throw new Error('Login service returned an incomplete session.');const {error:sessionError}=await db.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});if(sessionError)throw sessionError;await loadForUser(data.user);}catch(err){setStatus('Sign-in / data loading failed: '+err.message);}finally{$('loginButton').disabled=false;$('loginButton').textContent='Sign In & Load Equipment Data';}});
 function startNew(type){editingId=null;$('txForm').reset();$('txTypeForm').value=type||'receive';updateTransactionForm();switchSection('transactions');$('txFormPanel').scrollIntoView({behavior:'smooth',block:'start'});}
 $('newTop').addEventListener('click',()=>startNew('receive'));document.querySelectorAll('[data-quick]').forEach(b=>b.addEventListener('click',()=>switchSection(b.dataset.quick==='receive'?'receive':'issue')));
 function updateTransactionForm(){const type=$('txTypeForm').value,isReceive=type==='receive',isIssue=type==='issue',isReturn=type==='return',isTransfer=type==='transfer_out',showMandi=isIssue||isReturn,source=isReceive?$('receiptSource').value:null,isPurchase=isReceive&&source==='store_purchase',isDh01=isReceive&&source==='dh01_transfer';$('receiptSourceField').style.display=isReceive?'block':'none';$('transferDestinationField').style.display=isTransfer?'block':'none';$('transferDestination').required=isTransfer;$('supplierField').style.display=isPurchase?'block':'none';$('poField').style.display=isPurchase?'block':'none';$('invoiceField').style.display=isPurchase?'block':'none';$('plantField').style.display=isDh01?'block':'none';$('mandiCodeField').style.display=showMandi?'block':'none';$('mandiNameField').style.display=showMandi?'block':'none';$('mandiCode').required=showMandi;$('mandiName').required=showMandi;$('supplierName').required=isPurchase;$('receiptSource').required=isReceive;$('personLabel').textContent=isReceive?'Received By (Store)':isReturn?'Returned By':isTransfer?'Transferred By':'Issued To';$('person').placeholder=isReceive?'Store employee name':'Employee / receiver name';$('multiIssuePanel').querySelector('label').textContent=isReceive?'Select Equipment & Quantity':'Select Equipment & Quantity';$('formTitle').textContent=isReceive?'Receive Material into Company Store':isIssue?'Issue Equipment to Mandi':isReturn?'Receive Equipment Return':'Transfer Equipment Out';$('save').textContent=isIssue?'Save Mandi Issue':isReceive?'Save Material Receipt':isReturn?'Save Return':'Save Transfer Out';}
