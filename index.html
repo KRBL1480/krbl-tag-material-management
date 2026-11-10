@@ -808,7 +808,7 @@ body.krbl-viewer #krblAdminOpen{display:none!important}
   const getSelectedWork=()=>[...document.querySelectorAll('[data-work-permission]:checked')].map(x=>x.dataset.workPermission);
   const setSelectedWork=(items=[])=>document.querySelectorAll('[data-work-permission]').forEach(x=>{x.checked=items.includes(x.dataset.workPermission);});
   const roleWorkHints={admin:'Super Admin: full system access, employee management, all reports and activity monitoring.',office:'Office: view records and reports, coordinate users and office operations; choose exact duties below.',team:'Team: perform assigned mandi operations only; choose the exact duties below.',viewer:'Viewer: read-only access; normally choose View transactions and reports only.'};
-  el('krblAdminRole').addEventListener('change',()=>{el('krblRoleWorkHint').textContent=roleWorkHints[el('krblAdminRole').value]||'';});
+  el('krblAdminRole').addEventListener('change',()=>{const role=el('krblAdminRole').value;el('krblRoleWorkHint').textContent=roleWorkHints[role]||'';el('krblAdminArea').value=role==='office'?'office':'team';});
   el('krblSelectAllWork').addEventListener('click',()=>{document.querySelectorAll('[data-work-permission]').forEach(x=>x.checked=true);msg('All work permissions selected. Save the employee to apply.');});
   el('krblClearWork').addEventListener('click',()=>{setSelectedWork([]);msg('Work permissions cleared. Save the employee to apply.');});
   async function loadProfiles(){
