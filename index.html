@@ -757,6 +757,17 @@ body.krbl-viewer #krblAdminOpen{display:none!important}
             <label><input type="checkbox" data-work-permission="activity_log"><span>View activity log<small>Review employee actions</small></span></label>
             <label><input type="checkbox" data-work-permission="manage_users"><span>Manage employees<small>Create users and assign work</small></span></label>
           </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ead9b8"><b>Digital Equipment Register — assign separately</b>
+          <div class="krblPermissionGrid">
+            <label><input type="checkbox" data-work-permission="equipment_receive"><span>Equipment Receive<small>Record equipment received into store</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_issue"><span>Equipment Issue<small>Issue equipment to assigned mandis</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_return"><span>Equipment Return<small>Receive returned equipment from mandis</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_transfer"><span>Equipment Transfer Out<small>Transfer equipment to another plant / location</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_view"><span>Equipment Transactions & Verification<small>View equipment stock and transaction history</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_edit"><span>Edit Equipment Transactions<small>Correct existing equipment records</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_cancel"><span>Cancel Equipment Transactions<small>Cancel an incorrect equipment transaction</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_reports"><span>Equipment Reports<small>View and export equipment reports</small></span></label>
+          </div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="krblSelectAllWork" type="button" class="secondary">Select all work</button><button id="krblClearWork" type="button" class="secondary">Clear work</button></div>
           <span style="font-weight:400;color:#596658">These selections save assigned responsibilities. Database-level enforcement will be completed separately before relying on them as security restrictions.</span>
         </div>
@@ -804,7 +815,7 @@ body.krbl-viewer #krblAdminOpen{display:none!important}
     [...select.options].forEach(o=>o.selected=selectedKeys.has(o.value));
   }
   const getSelectedMandis=()=>[...el('krblAdminMandis').selectedOptions].map(o=>{const parts=o.value.split('|');return {code:parts[0],name:parts.slice(1).join('|')};});
-  const workPermissionLabels={receive:'Receive material',issue:'Issue material to mandi',view_records:'View transactions',edit_records:'Edit transactions',cancel_records:'Cancel transactions',reports:'View / export reports',activity_log:'View activity log',manage_users:'Manage employees'};
+  const workPermissionLabels={receive:'Receive material',issue:'Issue material to mandi',view_records:'View transactions',edit_records:'Edit transactions',cancel_records:'Cancel transactions',reports:'View / export reports',activity_log:'View activity log',manage_users:'Manage employees',equipment_receive:'Equipment Receive',equipment_issue:'Equipment Issue',equipment_return:'Equipment Return',equipment_transfer:'Equipment Transfer Out',equipment_view:'Equipment Transactions & Verification',equipment_edit:'Edit Equipment Transactions',equipment_cancel:'Cancel Equipment Transactions',equipment_reports:'Equipment Reports'};
   const getSelectedWork=()=>[...document.querySelectorAll('[data-work-permission]:checked')].map(x=>x.dataset.workPermission);
   const setSelectedWork=(items=[])=>document.querySelectorAll('[data-work-permission]').forEach(x=>{x.checked=items.includes(x.dataset.workPermission);});
   const roleWorkHints={admin:'Super Admin: full system access, employee management, all reports and activity monitoring.',office:'Office: view records and reports, coordinate users and office operations; choose exact duties below.',team:'Team: perform assigned mandi operations only; choose the exact duties below.',viewer:'Viewer: read-only access; normally choose View transactions and reports only.'};
