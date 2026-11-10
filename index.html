@@ -648,6 +648,11 @@ render();
     #krblAdminModal .adminGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     #krblAdminModal .adminField{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
     #krblAdminModal .adminWide{grid-column:1/-1}
+    #krblAdminModal .krblPermissionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+    #krblAdminModal .krblPermissionGrid label{display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid #e3d4b8;border-radius:9px;background:#fff;font-weight:600}
+    #krblAdminModal .krblPermissionGrid input{width:auto;margin:2px 0 0;accent-color:#008044}
+    #krblAdminModal .krblPermissionGrid small{display:block;font-weight:400;color:#65736a}
+    @media(max-width:600px){#krblAdminModal .krblPermissionGrid{grid-template-columns:1fr}}
     body.krbl-viewer #krblAdminOpen{display:none!important}
     @media(max-width:600px){#krblAdminModal .adminGrid{grid-template-columns:1fr}}
   `;
@@ -682,8 +687,23 @@ render();
         <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
         <label class="adminField">Username<input id="krblAdminUsername" autocomplete="off" placeholder="e.g. GOVIND01"></label>
         <label class="adminField">Initial Password<input id="krblAdminInitialPassword" type="password" autocomplete="new-password" placeholder="Minimum 10 characters"></label>
-        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select></label>
+        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select><span id="krblRoleWorkHint" style="font-weight:400;color:#52645a">Super Admin: full system access and user management.</span></label>
         <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
+        <div class="adminField adminWide" id="krblWorkPermissionPanel">
+          <b>Assign work permissions — select each task manually</b>
+          <div class="krblPermissionGrid">
+            <label><input type="checkbox" data-work-permission="receive"><span>Receive material<small>Enter new stock received in store</small></span></label>
+            <label><input type="checkbox" data-work-permission="issue"><span>Issue material to mandi<small>Record material issued to a mandi</small></span></label>
+            <label><input type="checkbox" data-work-permission="view_records"><span>View transactions<small>See receipt and issue history</small></span></label>
+            <label><input type="checkbox" data-work-permission="edit_records"><span>Edit transactions<small>Correct existing transaction details</small></span></label>
+            <label><input type="checkbox" data-work-permission="cancel_records"><span>Cancel transactions<small>Cancel an incorrect transaction</small></span></label>
+            <label><input type="checkbox" data-work-permission="reports"><span>View / export reports<small>Print and export Excel reports</small></span></label>
+            <label><input type="checkbox" data-work-permission="activity_log"><span>View activity log<small>Review employee actions</small></span></label>
+            <label><input type="checkbox" data-work-permission="manage_users"><span>Manage employees<small>Create users and assign work</small></span></label>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="krblSelectAllWork" type="button" class="secondary">Select all work</button><button id="krblClearWork" type="button" class="secondary">Clear work</button></div>
+          <span style="font-weight:400;color:#596658">These selections save assigned responsibilities. Database-level enforcement will be completed separately before relying on them as security restrictions.</span>
+        </div>
         <label class="adminField adminWide">Assigned mandis — scroll and select one or more
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button id="krblSelectAllMandis" type="button" class="secondary">Select All Mandis</button>
@@ -728,14 +748,21 @@ render();
     [...select.options].forEach(o=>o.selected=selectedKeys.has(o.value));
   }
   const getSelectedMandis=()=>[...el('krblAdminMandis').selectedOptions].map(o=>{const parts=o.value.split('|');return {code:parts[0],name:parts.slice(1).join('|')};});
+  const workPermissionLabels={receive:'Receive material',issue:'Issue material to mandi',view_records:'View transactions',edit_records:'Edit transactions',cancel_records:'Cancel transactions',reports:'View / export reports',activity_log:'View activity log',manage_users:'Manage employees'};
+  const getSelectedWork=()=>[...document.querySelectorAll('[data-work-permission]:checked')].map(x=>x.dataset.workPermission);
+  const setSelectedWork=(items=[])=>document.querySelectorAll('[data-work-permission]').forEach(x=>{x.checked=items.includes(x.dataset.workPermission);});
+  const roleWorkHints={admin:'Super Admin: full system access, employee management, all reports and activity monitoring.',office:'Office: view records and reports, coordinate users and office operations; choose exact duties below.',team:'Team: perform assigned mandi operations only; choose the exact duties below.',viewer:'Viewer: read-only access; normally choose View transactions and reports only.'};
+  el('krblAdminRole').addEventListener('change',()=>{el('krblRoleWorkHint').textContent=roleWorkHints[el('krblAdminRole').value]||'';});
+  el('krblSelectAllWork').addEventListener('click',()=>{document.querySelectorAll('[data-work-permission]').forEach(x=>x.checked=true);msg('All work permissions selected. Save the employee to apply.');});
+  el('krblClearWork').addEventListener('click',()=>{setSelectedWork([]);msg('Work permissions cleared. Save the employee to apply.');});
   async function loadProfiles(){
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const host=el('krblAdminList');host.textContent='Loading employee profiles…';await loadMandiOptions();
-    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,email,role,department,area,mandi_code,mandi_name,assigned_mandis,active,last_login_at,last_activity_at,created_at').order('full_name',{ascending:true}).limit(300);
+    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,email,role,department,area,mandi_code,mandi_name,assigned_mandis,work_permissions,active,last_login_at,last_activity_at,created_at').order('full_name',{ascending:true}).limit(300);
     if(res.error){host.textContent='Could not load employee profiles: '+res.error.message+' (code '+(res.error.code||'n/a')+'). Confirm SQL ran in this same Supabase project and admin role is present.';msg('Load failed: '+res.error.message);return;}
     if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
-    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Username</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.username||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td>'+esc(p.last_login_at?new Date(p.last_login_at).toLocaleString():'Never')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button> <button type="button" data-reset-uid="'+esc(p.user_id)+'" class="secondary krblResetPassword">Reset Password</button></td></tr>').join('')+'</tbody></table>';
-    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminUsername').value=p.username||'';el('krblAdminInitialPassword').value='';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
+    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Username</th><th>Role</th><th>Assigned work</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.username||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc((p.work_permissions||[]).map(k=>workPermissionLabels[k]||k).join(', ')||'No work assigned')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td>'+esc(p.last_login_at?new Date(p.last_login_at).toLocaleString():'Never')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button> <button type="button" data-reset-uid="'+esc(p.user_id)+'" class="secondary krblResetPassword">Reset Password</button></td></tr>').join('')+'</tbody></table>';
+    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminUsername').value=p.username||'';el('krblAdminInitialPassword').value='';el('krblAdminRole').value=p.role||'viewer';el('krblRoleWorkHint').textContent=roleWorkHints[el('krblAdminRole').value]||'';setSelectedWork(p.work_permissions||[]);el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
     host.querySelectorAll('.krblResetPassword').forEach(b=>b.addEventListener('click',async()=>{const target=res.data.find(x=>x.user_id===b.dataset.resetUid);if(!target)return;const password=prompt('Set a new password for '+target.full_name+' (minimum 10 characters):');if(password===null)return;if(password.length<10){msg('Password must contain at least 10 characters.');return;}msg('Updating employee password…');const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'reset_password',user_id:target.user_id,password}});if(error||data?.error){msg('Password reset failed: '+(data?.error||error?.message||'Unknown error'));return;}msg('Password reset successfully for '+target.full_name+'. Share it securely.');}));
   }
   btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.user_metadata?.full_name||krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
@@ -760,7 +787,7 @@ render();
     if(!['office','team','viewer'].includes(role)){msg('New employee role must be Office, Team or Viewer. Super Admin cannot be assigned here.');return;}
     if(role==='team'&&!assigned_mandis.length){msg('Select at least one mandi for a Team employee.');return;}
     msg('Creating employee account…');
-    const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'create',full_name:name,employee_id:empId,username,password,role,area,assigned_mandis}});
+    const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'create',full_name:name,employee_id:empId,username,password,role,area,assigned_mandis,work_permissions:getSelectedWork()}});
     if(error||data?.error){msg('Account creation failed: '+(data?.error||error?.message||'Unknown error'));return;}
     el('krblAdminUid').value=data.user_id||'';
     el('krblAdminInitialPassword').value='';
@@ -780,7 +807,7 @@ render();
     if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
     const assigned_mandis=selectedMandis;const codes=assigned_mandis.map(x=>x.code).filter(Boolean), names=assigned_mandis.map(x=>x.name).filter(Boolean);
     msg('Saving employee profile…');
-    const profile={user_id:uid,full_name:name,employee_id:empId||null,username,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
+    const work_permissions=getSelectedWork();const profile={user_id:uid,full_name:name,employee_id:empId||null,username,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,work_permissions,active};
     const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
     if(pr.error){msg('Profile save failed: '+pr.error.message+' — ensure the updated SQL setup has been run in Supabase.');return;}
     const rr=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
