@@ -731,13 +731,14 @@ render();
   async function loadProfiles(){
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
     const host=el('krblAdminList');host.textContent='Loading employee profiles…';await loadMandiOptions();
-    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,email,role,department,area,mandi_code,mandi_name,assigned_mandis,active,created_at').order('full_name',{ascending:true}).limit(300);
+    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,email,role,department,area,mandi_code,mandi_name,assigned_mandis,active,last_login_at,last_activity_at,created_at').order('full_name',{ascending:true}).limit(300);
     if(res.error){host.textContent='Could not load employee profiles: '+res.error.message+' (code '+(res.error.code||'n/a')+'). Confirm SQL ran in this same Supabase project and admin role is present.';msg('Load failed: '+res.error.message);return;}
     if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
-    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Email</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button></td></tr>').join('')+'</tbody></table>';
-    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminEmail').value=p.email||'';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
+    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Username</th><th>Role</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.username||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td>'+esc(p.last_login_at?new Date(p.last_login_at).toLocaleString():'Never')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button> <button type="button" data-reset-uid="'+esc(p.user_id)+'" class="secondary krblResetPassword">Reset Password</button></td></tr>').join('')+'</tbody></table>';
+    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminUsername').value=p.username||'';el('krblAdminInitialPassword').value='';el('krblAdminRole').value=p.role||'viewer';el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
+    host.querySelectorAll('.krblResetPassword').forEach(b=>b.addEventListener('click',async()=>{const target=res.data.find(x=>x.user_id===b.dataset.resetUid);if(!target)return;const password=prompt('Set a new password for '+target.full_name+' (minimum 10 characters):');if(password===null)return;if(password.length<10){msg('Password must contain at least 10 characters.');return;}msg('Updating employee password…');const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'reset_password',user_id:target.user_id,password}});if(error||data?.error){msg('Password reset failed: '+(data?.error||error?.message||'Unknown error'));return;}msg('Password reset successfully for '+target.full_name+'. Share it securely.');}));
   }
-  btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
+  btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.user_metadata?.full_name||krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
   el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
   modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
   el('krblAdminRefresh').addEventListener('click',loadProfiles);
@@ -768,22 +769,22 @@ render();
   });
   el('krblAdminSave').addEventListener('click',async()=>{
     if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
-    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), email=el('krblAdminEmail').value.trim();
-    const uid=(el('krblAdminUid').value.trim() || ((email && krblUser?.email && email.toLowerCase()===krblUser.email.toLowerCase()) ? krblUser.id : ''));
+    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), username=el('krblAdminUsername').value.trim().toLowerCase();
+    const uid=el('krblAdminUid').value.trim();
     const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
     const selectedMandis=getSelectedMandis();
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('This email is not the currently signed-in account. To register another employee, first create/invite their Supabase Auth account; then connect it through the secure invitation workflow.');return;}
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Select an existing employee from the Registered employees list before saving changes.');return;}
     if(!name){msg('Enter employee name.');return;}
     if(!email||!/^\S+@\S+\.\S+$/.test(email)){msg('Enter a valid email address.');return;}
     if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
     const assigned_mandis=selectedMandis;const codes=assigned_mandis.map(x=>x.code).filter(Boolean), names=assigned_mandis.map(x=>x.name).filter(Boolean);
     msg('Saving employee profile…');
-    const profile={user_id:uid,full_name:name,employee_id:empId||null,email,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
+    const profile={user_id:uid,full_name:name,employee_id:empId||null,username,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,active};
     const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
     if(pr.error){msg('Profile save failed: '+pr.error.message+' — ensure the updated SQL setup has been run in Supabase.');return;}
     const rr=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
     if(rr.error){msg('Profile saved, but role update failed: '+rr.error.message);return;}
-    msg('Employee profile and role saved. Note: Office/Team permissions still require database policy setup before they can safely edit records.');
+    msg('Employee profile, username, role and mandi assignment saved. Password changes are managed by Super Admin.');
     await loadProfiles();
   });
   const syncVisibility=()=>{btn.style.display=(krblCloudReady&&krblRole==='admin')?'block':'none';};
