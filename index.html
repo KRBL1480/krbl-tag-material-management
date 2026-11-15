@@ -870,7 +870,7 @@ body.krbl-viewer #krblAdminOpen{display:none!important}
     if(role==='team'&&!assigned_mandis.length){msg('Select at least one mandi for a Team employee.');return;}
     msg('Creating employee account…');
     const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'create',full_name:name,employee_id:empId,username,password,role,area,assigned_mandis,work_permissions:getSelectedWork()}});
-    if(error||data?.error){msg('Account creation failed: '+(data?.error||error?.message||'Unknown error'));return;}
+    if(error||data?.error){let detail=data?.error||'';if(!detail&&error?.context){try{const body=await error.context.clone().json();detail=body?.error||body?.message||JSON.stringify(body);}catch{try{detail=await error.context.clone().text();}catch{}}}msg('Account creation failed: '+(detail||error?.message||'Unknown error'));return;}
     el('krblAdminUid').value=data.user_id||'';
     el('krblAdminInitialPassword').value='';
     msg('Employee account created. Employee ID: '+data.employee_id+' | Username: '+data.username+'. No email was sent. Share the initial password securely.');
