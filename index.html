@@ -545,6 +545,7 @@ async function krblLoadCloud(){
   const gate=document.getElementById('krblAuthGate'); if(gate) gate.style.display='none';
   krblSetStatus('Cloud connected • '+krblRole.toUpperCase()+' • '+(krblProfile?.full_name||krblUser.email||'Employee'));
   render();
+  window.dispatchEvent(new Event('krbl-issues-loaded'));
 }
 const krblBaseline={receipts:new Map(),issues:new Map()};
 function krblHasPermission(permission){
@@ -696,7 +697,9 @@ render();
    if(code && String(r.code||'').trim()) return String(r.code||'').trim().toLowerCase()===code.toLowerCase();
    return String(r.mandi||'').trim().toLowerCase()===String(mandi||'').trim().toLowerCase();
   });
-  return rows.reduce((sum,r)=>sum+Math.min(Number(r.white||0)*800,Number(r.black||0)*4000),0);
+  const whiteTags=rows.reduce((sum,r)=>sum+Number(r.white||0)*800,0);
+  const blackRibbonTags=rows.reduce((sum,r)=>sum+Number(r.black||0)*4000,0);
+  return Math.min(whiteTags,blackRibbonTags);
  }
  function populatePrintingMandis(){
   const select=$p('printingMandi');if(!select)return;
@@ -766,6 +769,7 @@ render();
  });
  $p('printingMandi')?.addEventListener('change',()=>{const selected=($p('printingMandi').value||'').split('|');$p('printingCode').value=(selected[0]||'').trim();renderPrinting();});
  document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(()=>{populatePrintingMandis();renderPrinting();},0));
+ window.addEventListener('krbl-issues-loaded',()=>{populatePrintingMandis();renderPrinting();});
  populatePrintingMandis();renderPrinting();
 })();
 </script>
