@@ -176,6 +176,7 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <button type="button" data-page="receipt"><span>＋</span>Material Receipt</button>
   <button type="button" data-page="issue"><span>🚚</span>Mandi Issue</button>
   <button type="button" data-page="issue-history"><span>▤</span>Issue History</button>
+  <button type="button" data-page="printing"><span>▧</span>Printing Performance</button>
   <button type="button" data-page="receipt-history"><span>▣</span>Receipt History</button>
   <button type="button" data-page="stock"><span>▥</span>Stock & Calculation</button>
   <button type="button" data-page="backup"><span>◉</span>Backup & Restore</button>
@@ -246,6 +247,31 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <tr style="background:#ffedc9;font-weight:bold"><td colspan="4">Combined Total Tag Capacity</td><td>61,600 tags</td></tr>
   </tbody></table></div>
  </section>
+</div>
+<div class="page-view" id="page-printing">
+<div class="page-heading"><span>Printing Performance</span><small>MANDI-WISE TAG GENERATION</small></div>
+<section class="panel">
+ <h2>Gutka Printing History Import</h2>
+ <div class="grid">
+  <div><label for="printingMandi">Mandi Name</label><input id="printingMandi" value="Narela" placeholder="Enter mandi name"></div>
+  <div><label for="printingCode">Mandi Code (optional)</label><input id="printingCode" placeholder="Enter mandi code if available"></div>
+  <div class="full"><label for="printingCsv">Upload Gutka Printing Logs CSV</label><input id="printingCsv" type="file" accept=".csv,text/csv"></div>
+ </div>
+ <p class="hint">Import the GutkaLogs CSV containing Gutka No, Type Of Bags, Total Label (with Tol.), Printed and Rate (INR). The printed count is taken from the Printed column.</p>
+ <div class="actions"><button type="button" class="primary" id="importPrintingCsv">Import Printing History</button><button type="button" class="secondary" id="refreshPrinting">Refresh Calculation</button></div>
+ <div id="printingImportMessage" class="notice">No printing history imported yet. Purchase and Mandi Issue sections remain unchanged.</div>
+</section>
+<section class="stats">
+ <div class="stat"><span>Total Tags Printed</span><strong id="printingTotal">0</strong><small>From imported Gutka printing logs</small></div>
+ <div class="stat"><span>Material-Issue Tag Capacity</span><strong id="printingCapacity">0</strong><small>Based on selected mandi issue records</small></div>
+ <div class="stat"><span>Tags Generation %</span><strong id="printingPercent">0%</strong><small>Printed tags ÷ issued material capacity × 100</small></div>
+ <div class="stat"><span>Unprinted Capacity</span><strong id="printingRemaining">0</strong><small>Issue capacity less printed tags; may be negative if printing exceeds recorded issue</small></div>
+</section>
+<section class="panel">
+ <h2>Mandi-wise Printing Summary</h2>
+ <div class="tablewrap"><table><thead><tr><th>Mandi</th><th>Gutka Records</th><th>Tags Printed</th><th>Material-Issue Capacity</th><th>Generation %</th></tr></thead><tbody id="printingSummaryRows"><tr><td colspan="5" class="empty">Import a printing CSV to view the summary.</td></tr></tbody></table></div>
+ <p class="notice">Calculation basis: issued tag capacity = the lower of White Roll capacity (1 PCS = 800 tags) and Black Ribbon capacity (1 PCS = 4,000 tags). Printing percentage is calculated against Mandi Issue records for the same Mandi Code; if no code is entered, the Mandi Name is matched. This is a comparison of printed tags against issued capacity, not a physical stock verification.</p>
+</section>
 </div>
 <div class="page-view" id="page-issue-history">
 <div class="page-heading"><span>Issue History</span><small>KRBL DIGITAL SYSTEM</small></div>
@@ -549,6 +575,74 @@ async function krblSignUp(){
   });
 })();
 render();
+</script>
+
+<script>
+(function(){
+ const STORE='krblPrintingHistory_v1';
+ let printingRows=[];
+ try{printingRows=JSON.parse(localStorage.getItem(STORE)||'[]')}catch(e){printingRows=[]}
+ const $p=id=>document.getElementById(id);
+ const fmt=v=>Number(v||0).toLocaleString('en-IN');
+ function issueCapacity(mandi,code){
+  const rows=(db.issues||[]).filter(r=>{
+   if(code && String(r.code||'').trim()) return String(r.code||'').trim().toLowerCase()===code.toLowerCase();
+   return String(r.mandi||'').trim().toLowerCase()===String(mandi||'').trim().toLowerCase();
+  });
+  return rows.reduce((sum,r)=>sum+Math.min(Number(r.white||0)*800,Number(r.black||0)*4000),0);
+ }
+ function renderPrinting(){
+  const mandi=($p('printingMandi')?.value||'').trim()||'Narela';
+  const code=($p('printingCode')?.value||'').trim();
+  const rows=printingRows.filter(r=>String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && (!code || String(r.code||'').toLowerCase()===code.toLowerCase()));
+  const printed=rows.reduce((a,r)=>a+Number(r.printed||0),0);
+  const capacity=issueCapacity(mandi,code);
+  const pct=capacity>0?(printed/capacity*100):0;
+  $p('printingTotal').textContent=fmt(printed);
+  $p('printingCapacity').textContent=fmt(capacity);
+  $p('printingPercent').textContent=capacity>0?pct.toFixed(2)+'%':'—';
+  $p('printingRemaining').textContent=fmt(capacity-printed);
+  const grouped=new Map();
+  for(const r of printingRows){
+   const k=String(r.mandi||'Unknown')+'|'+String(r.code||'');
+   if(!grouped.has(k)) grouped.set(k,{mandi:r.mandi||'Unknown',code:r.code||'',count:0,printed:0});
+   const x=grouped.get(k);x.count++;x.printed+=Number(r.printed||0);
+  }
+  const data=[...grouped.values()].filter(x=>x.mandi.toLowerCase()===mandi.toLowerCase() && (!code || String(x.code).toLowerCase()===code.toLowerCase()));
+  $p('printingSummaryRows').innerHTML=data.length?data.map(x=>{
+   const cap=issueCapacity(x.mandi,x.code),p=cap>0?(x.printed/cap*100).toFixed(2)+'%':'—';
+   return '<tr><td>'+x.mandi+(x.code?' ('+x.code+')':'')+'</td><td>'+fmt(x.count)+'</td><td class="num">'+fmt(x.printed)+'</td><td class="num">'+fmt(cap)+'</td><td class="num"><strong>'+p+'</strong></td></tr>';
+  }).join(''):'<tr><td colspan="5" class="empty">No printing rows for this mandi. Import a CSV to begin.</td></tr>';
+ }
+ function parseCSV(text){
+  const out=[];let row=[],field='',quoted=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+   if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++}else if(c==='"')quoted=false;else field+=c}
+   else if(c==='"')quoted=true;else if(c===','){row.push(field);field=''}else if(c==='\n'){row.push(field);out.push(row);row=[];field=''}else if(c!=='\r')field+=c;
+  }
+  if(field.length||row.length){row.push(field);out.push(row)}
+  return out;
+ }
+ $p('importPrintingCsv')?.addEventListener('click',async()=>{
+  const file=$p('printingCsv')?.files?.[0];if(!file){alert('Please select GutkaLogs CSV first.');return}
+  const mandi=($p('printingMandi').value||'').trim()||'Narela',code=($p('printingCode').value||'').trim();
+  const data=parseCSV(await file.text());if(data.length<2){alert('CSV has no data rows.');return}
+  const headers=data[0].map(x=>x.trim().toLowerCase());
+  const idx=headers.indexOf('printed'),gutkaIdx=headers.findIndex(x=>x.includes('gutka')),bagsIdx=headers.findIndex(x=>x.includes('type of bags'));
+  if(idx<0||gutkaIdx<0){alert('Required columns Gutka No and Printed were not found.');return}
+  const incoming=data.slice(1).filter(r=>r.some(v=>String(v||'').trim())).map(r=>({mandi,code,gutka:String(r[gutkaIdx]||'').trim(),bagType:bagsIdx>=0?String(r[bagsIdx]||'').trim():'',printed:Number(String(r[idx]||'').replace(/,/g,''))||0,importedAt:new Date().toISOString()})).filter(r=>r.gutka);
+  if(!incoming.length){alert('No valid printing records found.');return}
+  printingRows=printingRows.filter(r=>!(String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && String(r.code||'').toLowerCase()===code.toLowerCase())).concat(incoming);
+  localStorage.setItem(STORE,JSON.stringify(printingRows));
+  $p('printingImportMessage').textContent=incoming.length+' printing records imported for '+mandi+'. Total printed tags: '+fmt(incoming.reduce((a,r)=>a+r.printed,0))+'. Re-importing this mandi/code replaces its previous imported rows only.';
+  renderPrinting();
+ });
+ $p('refreshPrinting')?.addEventListener('click',renderPrinting);
+ $p('printingMandi')?.addEventListener('input',renderPrinting);
+ $p('printingCode')?.addEventListener('input',renderPrinting);
+ document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(renderPrinting,0));
+ renderPrinting();
+})();
 </script>
 
 <script>
