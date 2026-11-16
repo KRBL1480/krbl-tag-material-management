@@ -283,8 +283,8 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
 <section class="panel">
  <h2>Gutka Printing History Import</h2>
  <div class="grid">
-  <div><label for="printingMandi">Mandi Name</label><input id="printingMandi" value="Narela" placeholder="Enter mandi name"></div>
-  <div><label for="printingCode">Mandi Code (optional)</label><input id="printingCode" placeholder="Enter mandi code if available"></div>
+  <div><label for="printingMandi">Select Mandi *</label><select id="printingMandi" required><option value="">Loading mandis from Mandi Issue records...</option></select></div>
+  <div><label for="printingCode">Mandi Code</label><input id="printingCode" readonly placeholder="Auto-filled from Mandi Issue records"></div>
   <div class="full"><label for="printingCsv">Upload Gutka Printing Logs CSV</label><input id="printingCsv" type="file" accept=".csv,text/csv"></div>
  </div>
  <p class="hint">Import the GutkaLogs CSV containing Gutka No, Type Of Bags, Total Label (with Tol.), Printed and Rate (INR). The printed count is taken from the Printed column.</p>
@@ -698,12 +698,25 @@ render();
   });
   return rows.reduce((sum,r)=>sum+Math.min(Number(r.white||0)*800,Number(r.black||0)*4000),0);
  }
+ function populatePrintingMandis(){
+  const select=$p('printingMandi');if(!select)return;
+  const previous=select.value;
+  const mandis=[...new Map((db.issues||[]).filter(r=>String(r.mandi||'').trim()).map(r=>{
+   const name=String(r.mandi).trim(),code=String(r.code||'').trim(),key=code+'|'+name;
+   return [key,{key,name,code}];
+  }))].map(x=>x[1]).sort((a,b)=>a.name.localeCompare(b.name)||a.code.localeCompare(b.code));
+  select.innerHTML='<option value="">Select Mandi</option>'+mandis.map(m=>'<option value="'+String(m.key).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+m.name+(m.code?' ('+m.code+')':'')+'</option>').join('');
+  const chosen=mandis.find(m=>m.key===previous)||mandis[0];
+  select.value=chosen?chosen.key:'';
+  $p('printingCode').value=chosen?chosen.code:'';
+  if(!mandis.length)select.innerHTML='<option value="">No Mandi Issue records found</option>';
+ }
  function renderPrinting(){
-  const mandi=($p('printingMandi')?.value||'').trim()||'Narela';
-  const code=($p('printingCode')?.value||'').trim();
+  const selected=($p('printingMandi')?.value||'').split('|');
+  const code=(selected[0]||'').trim(),mandi=(selected.slice(1).join('|')||'').trim();
   const rows=printingRows.filter(r=>String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && (!code || String(r.code||'').toLowerCase()===code.toLowerCase()));
   const printed=rows.reduce((a,r)=>a+Number(r.printed||0),0);
-  const capacity=issueCapacity(mandi,code);
+  const capacity=mandi?issueCapacity(mandi,code):0;
   const pct=capacity>0?(printed/capacity*100):0;
   $p('printingTotal').textContent=fmt(printed);
   $p('printingCapacity').textContent=fmt(capacity);
@@ -715,7 +728,7 @@ render();
    if(!grouped.has(k)) grouped.set(k,{mandi:r.mandi||'Unknown',code:r.code||'',count:0,printed:0});
    const x=grouped.get(k);x.count++;x.printed+=Number(r.printed||0);
   }
-  const data=[...grouped.values()].filter(x=>x.mandi.toLowerCase()===mandi.toLowerCase() && (!code || String(x.code).toLowerCase()===code.toLowerCase()));
+  const data=[...grouped.values()].filter(x=>mandi && x.mandi.toLowerCase()===mandi.toLowerCase() && (!code || String(x.code).toLowerCase()===code.toLowerCase()));
   $p('printingSummaryRows').innerHTML=data.length?data.map(x=>{
    const cap=issueCapacity(x.mandi,x.code),p=cap>0?(x.printed/cap*100).toFixed(2)+'%':'—';
    return '<tr><td>'+x.mandi+(x.code?' ('+x.code+')':'')+'</td><td>'+fmt(x.count)+'</td><td class="num">'+fmt(x.printed)+'</td><td class="num">'+fmt(cap)+'</td><td class="num"><strong>'+p+'</strong></td></tr>';
@@ -732,7 +745,8 @@ render();
  }
  $p('importPrintingCsv')?.addEventListener('click',async()=>{
   const file=$p('printingCsv')?.files?.[0];if(!file){alert('Please select GutkaLogs CSV first.');return}
-  const mandi=($p('printingMandi').value||'').trim()||'Narela',code=($p('printingCode').value||'').trim();
+  const selected=($p('printingMandi').value||'').split('|'),code=(selected[0]||'').trim(),mandi=(selected.slice(1).join('|')||'').trim();
+  if(!mandi){alert('Please select a mandi from Mandi Issue records.');return}
   const data=parseCSV(await file.text());if(data.length<2){alert('CSV has no data rows.');return}
   const headers=data[0].map(x=>x.trim().toLowerCase());
   const idx=headers.indexOf('printed'),gutkaIdx=headers.findIndex(x=>x.includes('gutka')),bagsIdx=headers.findIndex(x=>x.includes('type of bags'));
@@ -750,10 +764,9 @@ render();
   $p('printingImportMessage').textContent='Temporary printing data cleared. No printing CSV data is stored.';
   renderPrinting();
  });
- $p('printingMandi')?.addEventListener('input',renderPrinting);
- $p('printingCode')?.addEventListener('input',renderPrinting);
- document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(renderPrinting,0));
- renderPrinting();
+ $p('printingMandi')?.addEventListener('change',()=>{const selected=($p('printingMandi').value||'').split('|');$p('printingCode').value=(selected[0]||'').trim();renderPrinting();});
+ document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(()=>{populatePrintingMandis();renderPrinting();},0));
+ populatePrintingMandis();renderPrinting();
 })();
 </script>
 <script>
