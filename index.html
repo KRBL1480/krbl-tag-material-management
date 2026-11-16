@@ -121,6 +121,10 @@ button.secondary:hover{background:#d6efc6}
 button.danger{background:#c9362b;color:white;border:1px solid #b52b21}
 button.danger:hover{background:#a92720}
 
+
+/* Prominent shortcut to the separate equipment register */
+.sidebar button.equipment-nav{background:linear-gradient(100deg,#f7d995,#ffefc7);color:#12482f;border:1px solid #e7bf6d;box-shadow:0 3px 10px #001e1220;margin:8px 0 10px;font-weight:850}
+.sidebar button.equipment-nav:hover{background:linear-gradient(100deg,#ffe8ae,#fff5da)}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -133,6 +137,9 @@ button.danger:hover{background:#a92720}
 #krblAuthCard input{width:100%;padding:12px;border:1px solid #d8c69f;border-radius:8px;margin:7px 0 12px;font:inherit}
 #krblAuthCard button{padding:11px 15px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer;margin:4px 5px 4px 0}
 #krblAuthCard button.secondary{background:#f7e3bd;color:#1b261c;border:1px solid #e4d2ad}
+#krblAuthCard button.link-button{background:transparent;color:#005332;text-decoration:underline;padding:7px 3px;box-shadow:none}
+#krblNewPassword,#krblSetNewPassword{display:none}
+#krblAuthCard .auth-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 #krblAuthMessage{font-size:13px;white-space:pre-wrap}
 #krblCloudStatus{position:fixed;right:12px;bottom:12px;z-index:1000;background:#004b2c;color:white;padding:8px 12px;border-radius:8px;font-size:12px;box-shadow:0 3px 12px #0002}
 body.krbl-viewer #page-receipt form,body.krbl-viewer #page-issue form,
@@ -145,13 +152,16 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <div id="krblAuthCard">
     <h2>KRBL Material Issue Management</h2>
     <p>Sign in to access the shared team dashboard. Your original dashboard design and calculations are retained.</p>
-    <label for="krblEmail">Work email</label>
-    <input id="krblEmail" type="email" autocomplete="username" placeholder="name@company.com">
+    <label for="krblIdentifier">Employee ID / Username</label>
+    <input id="krblIdentifier" type="text" autocomplete="username" placeholder="e.g. EMP001 or GOVIND01">
     <label for="krblPassword">Password</label>
     <input id="krblPassword" type="password" autocomplete="current-password" placeholder="Password">
-    <button id="krblSignIn" type="button">Sign in</button>
-    <button id="krblSignUp" class="secondary" type="button">Create account</button>
-    <p id="krblAuthMessage">Use an account created for your KRBL team. New accounts are Viewer by default.</p>
+    <div class="auth-actions"><button id="krblSignIn" type="button">Sign in</button></div>
+    <p style="font-size:12px;color:#596658">Employee accounts are created only by KRBL Admin. No email or self-sign-up is required.</p>
+    <label id="krblNewPasswordLabel" for="krblNewPassword" style="display:none">New password (minimum 8 characters)</label>
+    <input id="krblNewPassword" type="password" autocomplete="new-password" placeholder="Enter new password">
+    <button id="krblSetNewPassword" type="button">Set new password</button>
+    <p id="krblAuthMessage">Enter your Employee ID or Username and password provided by KRBL Admin.</p>
   </div>
 </div>
 <div id="krblCloudStatus">Cloud: not connected</div>
@@ -173,13 +183,16 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
 <nav class="sidebar" aria-label="Register sections">
   <div class="side-brand">KRBL LIMITED<br>MATERIAL ISSUE SYSTEM</div>
   <button type="button" data-page="dashboard" class="active"><span>⌂</span>Dashboard</button>
+  <button type="button" id="digitalEquipmentNav" class="equipment-nav" onclick="window.location.href='digital-equipment.html'"><span>🖨️</span>Digital Equipment</button>
+  <button type="button" id="gutkaPrinterNav" class="equipment-nav" onclick="window.location.href='gutka-printer.html'"><span>🧾</span>Gutka Printer Management</button>
   <button type="button" data-page="receipt"><span>＋</span>Material Receipt</button>
   <button type="button" data-page="issue"><span>🚚</span>Mandi Issue</button>
   <button type="button" data-page="issue-history"><span>▤</span>Issue History</button>
-  <button type="button" data-page="printing"><span>▧</span>Printing Performance</button>
   <button type="button" data-page="receipt-history"><span>▣</span>Receipt History</button>
   <button type="button" data-page="stock"><span>▥</span>Stock & Calculation</button>
+
   <button type="button" data-page="backup"><span>◉</span>Backup & Restore</button>
+  <button type="button" id="krblLogoutBtn"><span>↪</span>Log out</button>
 </nav>
 <main>
 <div class="page-view active" id="page-dashboard">
@@ -201,12 +214,14 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <form id="receiptForm">
    <div class="grid">
     <div><label for="receiptDate">Receipt Date *</label><input type="date" id="receiptDate" required></div>
-    <div><label for="receiptWhite">White Roll Received (packs; 1 pack = 27 PCS)</label><input type="number" id="receiptWhite" min="0" step="1" value="0"></div>
-    <div><label for="receiptBlack">Black Ribbon Received (packs; 1 pack = 10 PCS)</label><input type="number" id="receiptBlack" min="0" step="1" value="0"></div>
+    <div><label for="receiptWhite">White Roll Received (packs; 1 pack = 27 PCS)</label><input type="number" id="receiptWhite" min="0" step="any" value="0"></div>
+    <div><label for="receiptWhitePcs">White Roll Received (loose PCS)</label><input type="number" id="receiptWhitePcs" min="0" step="any" value="0"></div>
+    <div><label for="receiptBlack">Black Ribbon Received (packs; 1 pack = 10 PCS)</label><input type="number" id="receiptBlack" min="0" step="any" value="0"></div>
+    <div><label for="receiptBlackPcs">Black Ribbon Received (loose PCS)</label><input type="number" id="receiptBlackPcs" min="0" step="any" value="0"></div>
     <div><label for="receiptRef">PO / Challan / Reference</label><input id="receiptRef" placeholder="Enter reference number"></div>
     <div class="full"><label for="receiptNote">Remarks</label><input id="receiptNote" placeholder="Supplier, pending quantity, etc."></div>
    </div>
-   <div class="hint">Pack conversion: 1 White Roll pack = 27 PCS; 1 Black Ribbon pack = 10 PCS. Then 1 White Roll PCS = 800 tags and 1 Black Ribbon PCS = 4,000 tags.</div>
+   <div class="hint">Enter packs and any additional loose PCS separately. Total PCS = (White Roll packs × 27) + loose PCS, and (Black Ribbon packs × 10) + loose PCS. 1 White Roll PCS = 800 tags; 1 Black Ribbon PCS = 4,000 tags. Decimal quantities are supported.</div>
    <div class="actions"><button class="primary" type="submit">Save Receipt</button><button class="secondary" type="reset">Clear Form</button></div>
   </form>
  </section>
@@ -221,13 +236,13 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
     <div><label for="mandiName">Mandi Name *</label><input id="mandiName" required placeholder="e.g. Narela"></div>
     <div><label for="mandiCode">Mandi Code *</label><input id="mandiCode" required placeholder="e.g. D019"></div>
     <div><label for="issuedBy">Issued By</label><input id="issuedBy" placeholder="Employee name"></div>
-    <div><label for="whitePacks">White Roll Issue (packs)</label><input type="number" id="whitePacks" min="0" step="1" value="0"></div>
-    <div><label for="whitePcs">White Roll Issue (loose rolls/pcs)</label><input type="number" id="whitePcs" min="0" step="1" value="0"><p class="hint">1 roll = 800 tags</p></div>
-    <div><label for="blackPacks">Black Ribbon Issue (packs)</label><input type="number" id="blackPacks" min="0" step="1" value="0"></div>
-    <div><label for="blackPcs">Black Ribbon Issue (loose pcs)</label><input type="number" id="blackPcs" min="0" step="1" value="0"><p class="hint">1 ribbon = 4,000 tags</p></div>
+    <div><label for="whitePacks">White Roll Issue (packs)</label><input type="number" id="whitePacks" min="0" step="any" value="0"></div>
+    <div><label for="whitePcs">White Roll Issue (loose rolls/pcs)</label><input type="number" id="whitePcs" min="0" step="any" value="0"><p class="hint">1 roll = 800 tags</p></div>
+    <div><label for="blackPacks">Black Ribbon Issue (packs)</label><input type="number" id="blackPacks" min="0" step="any" value="0"></div>
+    <div><label for="blackPcs">Black Ribbon Issue (loose pcs)</label><input type="number" id="blackPcs" min="0" step="any" value="0"><p class="hint">1 ribbon = 4,000 tags</p></div>
     <div class="full"><label for="issueNote">Remarks</label><input id="issueNote" placeholder="Purpose, transporter, acknowledgement, etc."></div>
    </div>
-   <div class="notice" id="issuePreview">Issue calculation will appear here.</div>
+   <div class="notice" id="issuePreview">Decimal quantities are supported (e.g. 14.5, 15.3, 12.75). Issue calculation will appear here.</div>
    <div class="actions"><button class="primary" type="submit">Save Mandi Issue</button><button class="secondary" type="reset">Clear Form</button></div>
   </form>
  </section>
@@ -248,31 +263,6 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   </tbody></table></div>
  </section>
 </div>
-<div class="page-view" id="page-printing">
-<div class="page-heading"><span>Printing Performance</span><small>MANDI-WISE TAG GENERATION</small></div>
-<section class="panel">
- <h2>Gutka Printing History Import</h2>
- <div class="grid">
-  <div><label for="printingMandi">Mandi Name</label><input id="printingMandi" value="Narela" placeholder="Enter mandi name"></div>
-  <div><label for="printingCode">Mandi Code (optional)</label><input id="printingCode" placeholder="Enter mandi code if available"></div>
-  <div class="full"><label for="printingCsv">Upload Gutka Printing Logs CSV</label><input id="printingCsv" type="file" accept=".csv,text/csv"></div>
- </div>
- <p class="hint">Import the GutkaLogs CSV containing Gutka No, Type Of Bags, Total Label (with Tol.), Printed and Rate (INR). The printed count is taken from the Printed column.</p>
- <div class="actions"><button type="button" class="primary" id="importPrintingCsv">Import Printing History</button><button type="button" class="secondary" id="refreshPrinting">Refresh Calculation</button><button type="button" class="danger" id="clearPrinting">Clear Calculation</button></div>
- <div id="printingImportMessage" class="notice">No printing history imported yet. Purchase and Mandi Issue sections remain unchanged.</div>
-</section>
-<section class="stats">
- <div class="stat"><span>Total Tags Printed</span><strong id="printingTotal">0</strong><small>From imported Gutka printing logs</small></div>
- <div class="stat"><span>Material-Issue Tag Capacity</span><strong id="printingCapacity">0</strong><small>Based on selected mandi issue records</small></div>
- <div class="stat"><span>Tags Generation %</span><strong id="printingPercent">0%</strong><small>Printed tags ÷ issued material capacity × 100</small></div>
- <div class="stat"><span>Unprinted Capacity</span><strong id="printingRemaining">0</strong><small>Issue capacity less printed tags; may be negative if printing exceeds recorded issue</small></div>
-</section>
-<section class="panel">
- <h2>Mandi-wise Printing Summary</h2>
- <div class="tablewrap"><table><thead><tr><th>Mandi</th><th>Gutka Records</th><th>Tags Printed</th><th>Material-Issue Capacity</th><th>Generation %</th></tr></thead><tbody id="printingSummaryRows"><tr><td colspan="5" class="empty">Import a printing CSV to view the summary.</td></tr></tbody></table></div>
- <p class="notice">Calculation basis: issued tag capacity = the lower of White Roll capacity (1 PCS = 800 tags) and Black Ribbon capacity (1 PCS = 4,000 tags). Printing percentage is calculated against Mandi Issue records for the same Mandi Code; if no code is entered, the Mandi Name is matched. This is a comparison of printed tags against issued capacity, not a physical stock verification.</p>
-</section>
-</div>
 <div class="page-view" id="page-issue-history">
 <div class="page-heading"><span>Issue History</span><small>KRBL DIGITAL SYSTEM</small></div>
 <section class="panel">
@@ -284,7 +274,7 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
    <section class="issue-summary-card"><h3>All Mandis Combined Summary</h3><div class="summary-mandi-name">All mandis matching current year/date filters</div><div class="summary-metrics" id="allMandisSummary"></div></section>
   </div>
   <div class="tablewrap"><table><thead><tr><th>Issue Date</th><th>Mandi Name</th><th>Code</th><th>White Roll Issue</th><th>White Tags</th><th>Black Ribbon Issue</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody id="issueRows"></tbody></table></div>
-  <div class="actions no-print"><button class="secondary" id="exportIssues" type="button">Export Issue History CSV</button><button class="secondary" id="exportAll" type="button">Export All Records CSV</button><button class="secondary" type="button" onclick="window.print()">Print Report</button><button class="primary" id="downloadReport" type="button">Download Shareable HTML Report</button><button class="danger" id="clearHistory" type="button">Clear All Saved Data</button></div>
+  <div class="actions no-print"><button class="secondary" id="exportIssues" type="button">Export Issue History CSV</button><button class="secondary" id="exportAll" type="button">Export All Records CSV</button><button class="secondary" type="button" onclick="window.print()">Print Report</button><div class="report-actions"><button class="primary" id="downloadReport" type="button">Download Shareable HTML Report</button><button class="danger" id="clearHistory" type="button">Clear All Saved Data</button></div></div>
  </section>
 </div>
 <div class="page-view" id="page-receipt-history">
@@ -322,6 +312,8 @@ try{db=JSON.parse(localStorage.getItem(KEY))||db}catch(e){}
 let krblSupabase = null;
 let krblUser = null;
 let krblRole = 'viewer';
+let krblProfile = null;
+let krblWorkPermissions = [];
 let krblCloudReady = false;
 let krblSaveTimer = null;
 const krblInitialIds = { receipts: new Set(), issues: new Set() };
@@ -335,10 +327,10 @@ if(!db.packConversionV2){
 }
 
 function save(){
-  if(krblCloudReady && krblRole==='admin') krblEnsureIds();
+  if(krblCloudReady) krblEnsureIds();
   localStorage.setItem(KEY,JSON.stringify(db));
   render();
-  if(krblCloudReady && krblRole === 'admin'){
+  if(krblCloudReady){
     clearTimeout(krblSaveTimer);
     krblSaveTimer=setTimeout(()=>krblSyncAll().catch(err=>krblSetStatus('Cloud save failed: '+err.message)),250);
   }
@@ -384,19 +376,19 @@ function render(){
  totals();
  const rows=filteredIssues();
  updateIssueSummary(rows);
- $('issueRows').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.mandi)}</td><td><strong>${esc(r.code)}</strong></td><td>${r.white} PCS</td><td class="num">${(r.white*800).toLocaleString('en-IN')}</td><td>${r.black} PCS</td><td class="num">${(r.black*4000).toLocaleString('en-IN')}</td><td class="num"><strong>${Math.min(r.white*800,r.black*4000).toLocaleString('en-IN')}</strong></td><td>${esc(r.by||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons"><button class="secondary small" onclick="editIssue(${r._i})">Edit</button><button class="danger small" onclick="deleteIssue(${r._i})">Delete</button></td></tr>`).join(''):'<tr><td colspan="11" class="empty">No issue records yet.</td></tr>';
- $('receiptRows').innerHTML=db.receipts.length?db.receipts.map((r,i)=>`<tr><td>${esc(r.date)}</td><td>${r.white}</td><td>${r.black}</td><td>${esc(r.ref||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons"><button class="secondary small" onclick="editReceipt(${i})">Edit</button><button class="danger small" onclick="deleteReceipt(${i})">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No receipt records yet.</td></tr>';
+ $('issueRows').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.mandi)}</td><td><strong>${esc(r.code)}</strong></td><td>${r.white} PCS</td><td class="num">${(r.white*800).toLocaleString('en-IN')}</td><td>${r.black} PCS</td><td class="num">${(r.black*4000).toLocaleString('en-IN')}</td><td class="num"><strong>${Math.min(r.white*800,r.black*4000).toLocaleString('en-IN')}</strong></td><td>${esc(r.by||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons">${!krblCloudReady||krblHasPermission('edit_records')?'<button class="secondary small" onclick="editIssue('+r._i+')">Edit</button>':''}${!krblCloudReady||krblHasPermission('cancel_records')?'<button class="danger small" onclick="deleteIssue('+r._i+')">Delete</button>':''}</td></tr>`).join(''):'<tr><td colspan="11" class="empty">No issue records yet.</td></tr>';
+ $('receiptRows').innerHTML=db.receipts.length?db.receipts.map((r,i)=>`<tr><td>${esc(r.date)}</td><td>${r.white}</td><td>${r.black}</td><td>${esc(r.ref||'—')}</td><td>${esc(r.note||'—')}</td><td class="no-print action-buttons">${!krblCloudReady||krblHasPermission('edit_records')?'<button class="secondary small" onclick="editReceipt('+i+')">Edit</button>':''}${!krblCloudReady||krblHasPermission('cancel_records')?'<button class="danger small" onclick="deleteReceipt('+i+')">Delete</button>':''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No receipt records yet.</td></tr>';
  updatePreview();
 }
 function updatePreview(){const w=n('whitePacks')*27+n('whitePcs'),b=n('blackPacks')*10+n('blackPcs');$('issuePreview').innerHTML=`<strong>Calculated issue:</strong> White rolls: ${w} = ${(w*800).toLocaleString('en-IN')} tags &nbsp; | &nbsp; Black ribbons: ${b} = ${(b*4000).toLocaleString('en-IN')} tags &nbsp; | &nbsp; <strong>Total: ${Math.min(w*800,b*4000).toLocaleString('en-IN')} complete tags (limited by the lower material capacity)</strong>`}
 ['whitePacks','whitePcs','blackPacks','blackPcs'].forEach(id=>$(id).addEventListener('input',updatePreview));
-$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),white=whitePacks*27,black=blackPacks*10;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={date:$('receiptDate').value,white,black,whitePacks,blackPacks,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
-$('issueForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}const white=n('whitePacks')*27+n('whitePcs'),black=n('blackPacks')*10+n('blackPcs');if(!white&&!black){alert('Enter at least one issue quantity.');return}const rec={date:$('issueDate').value,mandi:$('mandiName').value.trim(),code:$('mandiCode').value.trim(),white,black,by:$('issuedBy').value.trim(),note:$('issueNote').value.trim()};if(editingIssueIndex!==null){db.issues[editingIssueIndex]=rec;editingIssueIndex=null}else{db.issues.push(rec)}save();e.target.reset();$('issueDate').value=today;const ib=$('issueForm').querySelector('[type="submit"]');if(ib)ib.textContent='Save Mandi Issue';updatePreview()});
+$('receiptForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady&&!krblHasPermission(editingReceiptIndex!==null?'edit_records':'receive')){alert('Your account is not assigned permission to receive or edit material.');return}const whitePacks=n('receiptWhite'),blackPacks=n('receiptBlack'),whiteLoosePcs=n('receiptWhitePcs'),blackLoosePcs=n('receiptBlackPcs'),white=whitePacks*27+whiteLoosePcs,black=blackPacks*10+blackLoosePcs;if(!white&&!black){alert('Enter at least one received quantity.');return}const rec={id:editingReceiptIndex!==null?db.receipts[editingReceiptIndex]?.id:crypto.randomUUID(),date:$('receiptDate').value,white,black,whitePacks,blackPacks,whiteLoosePcs,blackLoosePcs,ref:$('receiptRef').value.trim(),note:$('receiptNote').value.trim()};if(editingReceiptIndex!==null){db.receipts[editingReceiptIndex]=rec;editingReceiptIndex=null}else{db.receipts.push(rec)}save();e.target.reset();$('receiptDate').value=today;const rb=$('receiptForm').querySelector('[type="submit"]');if(rb)rb.textContent='Save Receipt'});
+$('issueForm').addEventListener('submit',e=>{e.preventDefault();if(krblCloudReady&&!krblHasPermission(editingIssueIndex!==null?'edit_records':'issue')){alert('Your account is not assigned permission to issue or edit material.');return}const white=n('whitePacks')*27+n('whitePcs'),black=n('blackPacks')*10+n('blackPcs');if(!white&&!black){alert('Enter at least one issue quantity.');return}const rec={id:editingIssueIndex!==null?db.issues[editingIssueIndex]?.id:crypto.randomUUID(),date:$('issueDate').value,mandi:$('mandiName').value.trim(),code:$('mandiCode').value.trim(),white,black,by:$('issuedBy').value.trim(),note:$('issueNote').value.trim()};if(krblCloudReady&&!krblCanAccessMandi(rec.code,rec.mandi)){alert('This mandi is not assigned to your account. Contact KRBL Admin to update your mandi access.');return}if(editingIssueIndex!==null){db.issues[editingIssueIndex]=rec;editingIssueIndex=null}else{db.issues.push(rec)}save();e.target.reset();$('issueDate').value=today;const ib=$('issueForm').querySelector('[type="submit"]');if(ib)ib.textContent='Save Mandi Issue';updatePreview()});
 
 let editingIssueIndex = null;
 let editingReceiptIndex = null;
 function editIssue(i){
- if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}
+ if(krblCloudReady&&!krblHasPermission('edit_records')){alert('Edit Transactions permission required.');return}
  const r=db.issues[i]; if(!r) return;
  editingIssueIndex=i;
  $('issueDate').value=r.date||today;
@@ -413,12 +405,14 @@ function editIssue(i){
  if(typeof updatePreview==='function') updatePreview();
 }
 function editReceipt(i){
- if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}
+ if(krblCloudReady&&!krblHasPermission('edit_records')){alert('Edit Transactions permission required.');return}
  const r=db.receipts[i]; if(!r) return;
  editingReceiptIndex=i;
  $('receiptDate').value=r.date||today;
  $('receiptWhite').value=Number(r.whitePacks ?? Math.floor((r.white||0)/27));
  $('receiptBlack').value=Number(r.blackPacks ?? Math.floor((r.black||0)/10));
+ $('receiptWhitePcs').value=Number(r.whiteLoosePcs ?? ((r.white||0)-Number(r.whitePacks||0)*27));
+ $('receiptBlackPcs').value=Number(r.blackLoosePcs ?? ((r.black||0)-Number(r.blackPacks||0)*10));
  $('receiptRef').value=r.ref||'';
  $('receiptNote').value=r.note||'';
  const form=$('receiptForm');
@@ -427,8 +421,8 @@ function editReceipt(i){
  form.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-function deleteIssue(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this issue record?')){db.issues.splice(i,1);save()}}
-function deleteReceipt(i){if(krblCloudReady && krblRole!=='admin'){alert('Admin access required.');return}if(confirm('Delete this receipt record?')){db.receipts.splice(i,1);save()}}
+function deleteIssue(i){if(krblCloudReady&&!krblHasPermission('cancel_records')){alert('Cancel Transactions permission required.');return}if(confirm('Delete this issue record?')){db.issues.splice(i,1);save()}}
+function deleteReceipt(i){if(krblCloudReady&&!krblHasPermission('cancel_records')){alert('Cancel Transactions permission required.');return}if(confirm('Delete this receipt record?')){db.receipts.splice(i,1);save()}}
 window.editIssue=editIssue;window.editReceipt=editReceipt;window.deleteIssue=deleteIssue;window.deleteReceipt=deleteReceipt;
 ['search','fromDate','toDate','issueYear'].forEach(id=>$(id).addEventListener('input',render));
 $('summaryMandi').addEventListener('change',render);
@@ -445,12 +439,15 @@ function downloadShareableReport(){
  const receiptRows=db.receipts.map(r=>`<tr><td>${escHtml(r.date)}</td><td>${r.white}</td><td>${(r.white*800).toLocaleString('en-IN')}</td><td>${r.black}</td><td>${(r.black*4000).toLocaleString('en-IN')}</td><td>${escHtml(r.ref||'')}</td><td>${escHtml(r.note||'')}</td></tr>`).join('');
  const t=totals();
  const report=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KRBL Material Issue Report</title><style>
- body{font-family:Arial,sans-serif;margin:24px;color:#1c2c20;background:#fffdf7}header{padding:20px;background:#e5f4df;border-bottom:5px solid #e99a2d;text-align:center}h1,h2{color:#004b2c}h1{margin:0 0 8px}h2{margin-top:28px;border-bottom:2px solid #008044;padding-bottom:8px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.kpi{padding:14px;border:1px solid #c9dfbd;border-top:4px solid #008044;background:#f1f8ed;border-radius:8px;min-width:140px}.kpi b{display:block;font-size:22px;color:#004b2c;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}th{background:#006b3f;color:white}th,td{border:1px solid #d6dfcf;padding:8px;text-align:left}tbody tr:nth-child(even){background:#f2f8ed}.note{font-size:12px;color:#596658;margin-top:25px}@media print{body{margin:10mm}}</style></head><body><header><h1>KRBL LIMITED — MATERIAL ISSUE REPORT</h1><b>White Roll &amp; Black Ribbon • Mandi Tag Printing</b><p>Generated: ${new Date().toLocaleString()}</p></header><div class="kpis"><div class="kpi">White Roll Received<b>${t.whiteReceived} PCS</b></div><div class="kpi">Black Ribbon Received<b>${t.blackReceived} PCS</b></div><div class="kpi">White Roll Balance<b>${t.whiteBalance} PCS</b></div><div class="kpi">Black Ribbon Balance<b>${t.blackBalance} PCS</b></div><div class="kpi">Tags Issued<b>${(t.whiteIssued*800+t.blackIssued*4000).toLocaleString('en-IN')}</b></div></div><h2>Mandi-wise Issue History</h2><table><thead><tr><th>Issue Date</th><th>Mandi</th><th>Code</th><th>White Roll PCS</th><th>White Tags</th><th>Black Ribbon PCS</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th></tr></thead><tbody>${issueRows||'<tr><td colspan="10">No issue records yet.</td></tr>'}</tbody></table><h2>Material Receipt History</h2><table><thead><tr><th>Receipt Date</th><th>White Roll PCS</th><th>White Tag Capacity</th><th>Black Ribbon PCS</th><th>Ribbon Tag Capacity</th><th>PO / Challan</th><th>Remarks</th></tr></thead><tbody>${receiptRows||'<tr><td colspan="7">No receipt records yet.</td></tr>'}</tbody></table><p class="note">This is a shareable snapshot of the records at the time of export. For full data restoration, use the JSON backup from the register.</p></body></html>`;
+ body{font-family:Arial,sans-serif;margin:24px;color:#1c2c20;background:#fffdf7}header{padding:20px;background:#e5f4df;border-bottom:5px solid #e99a2d;text-align:center}h1,h2{color:#004b2c}h1{margin:0 0 8px}h2{margin-top:28px;border-bottom:2px solid #008044;padding-bottom:8px}.kpis{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}.kpi{padding:14px;border:1px solid #c9dfbd;border-top:4px solid #008044;background:#f1f8ed;border-radius:8px;min-width:140px}.kpi b{display:block;font-size:22px;color:#004b2c;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}th{background:#006b3f;color:white}th,td{border:1px solid #d6dfcf;padding:8px;text-align:left}tbody tr:nth-child(even){background:#f2f8ed}.note{font-size:12px;color:#596658;margin-top:25px}@media print{body{margin:10mm}}</style></head><body><header><h1>KRBL LIMITED — MATERIAL ISSUE REPORT</h1><b>White Roll &amp; Black Ribbon • Mandi Tag Printing</b><p>Generated: ${new Date().toLocaleString()}</p></header><div class="kpis"><div class="kpi">White Roll Received<b>${t.whiteReceived} PCS</b></div><div class="kpi">Black Ribbon Received<b>${t.blackReceived} PCS</b></div><div class="kpi">White Roll Balance<b>${t.whiteBalance} PCS</b></div><div class="kpi">Black Ribbon Balance<b>${t.blackBalance} PCS</b></div><div class="kpi">Tags Issued<b>${(t.whiteIssued*800+t.blackIssued*4000).toLocaleString('en-IN')}</b></div></div><h2>Mandi-wise Issue History</h2><table><thead><tr><th>Issue Date</th><th>Mandi</th><th>Code</th><th>White Roll PCS</th><th>White Tags</th><th>Black Ribbon PCS</th><th>Ribbon Tags</th><th>Total Tags</th><th>Issued By</th><th>Remarks</th></tr></thead><tbody>${issueRows||'<tr><td colspan="10">No issue records yet.</td></tr>'}</tbody></table><h2>Material Receipt History</h2><table><thead><tr><th>Receipt Date</th><th>White Roll PCS</th><th>White Tag Capacity</th><th>Black Ribbon PCS</th><th>Ribbon Tag Capacity</th><th>PO / Challan</th><th>Remarks</th></tr></thead><tbody>${receiptRows||'<tr><td colspan="7">No receipt records yet.</td></tr>'}</tbody></table><p class="note">This is a shareable snapshot of the records at the time of export. For full data restoration, use the JSON backup from the register.</p>
+
+
+</body></html>`;
  const blob=new Blob([report],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KRBL_Material_Issue_Report_'+today+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
 }
 $('downloadReport')?.addEventListener('click',downloadShareableReport);
 
-$('clearHistory').onclick=()=>{if(krblRole!=='admin' && krblCloudReady){alert('Admin access required.');return}if(confirm('This will permanently delete all receipt and issue history saved in this browser. Export a backup first. Continue?')){db={receipts:[],issues:[]};save()}};
+$('clearHistory').onclick=()=>{if(krblCloudReady&&krblRole!=='admin'){alert('Admin access required.');return}if(confirm('This will permanently delete all receipt and issue history saved in this browser. Export a backup first. Continue?')){db={receipts:[],issues:[]};save()}};
 $('backupJson').onclick=()=>{const payload={app:'KRBL Consumables Issue Register',version:1,exportedAt:new Date().toISOString(),receipts:db.receipts,issues:db.issues};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='KRBL_Consumables_Backup_'+today+'.json';a.click();URL.revokeObjectURL(a.href)};
 $('restoreJsonBtn').onclick=()=>$('restoreJsonFile').click();
 $('restoreJsonFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.receipts)||!Array.isArray(data.issues))throw new Error('This backup file does not contain the expected receipt and issue history.');if(!confirm('Restore this backup? Current browser records will be replaced by the backup records. Download a backup of current records first if needed.'))return;db={receipts:data.receipts,issues:data.issues};save();alert('Backup restored successfully.');}catch(err){alert('Could not restore backup: '+err.message)}finally{e.target.value=''}});
@@ -486,8 +483,8 @@ function krblIssueToRow(r){
   };
 }
 function krblReceiptFromRow(r){
-  return {id:r.id,date:r.receipt_date,white:Number(r.white_roll_pcs||0),black:Number(r.black_ribbon_pcs||0),
-    whitePacks:Number(r.white_roll_packs||0),blackPacks:Number(r.black_ribbon_packs||0),ref:r.po_challan||'',note:r.remarks||''};
+  const white=Number(r.white_roll_pcs||0),black=Number(r.black_ribbon_pcs||0),whitePacks=Number(r.white_roll_packs||0),blackPacks=Number(r.black_ribbon_packs||0);
+  return {id:r.id,date:r.receipt_date,white,black,whitePacks,blackPacks,whiteLoosePcs:white-whitePacks*27,blackLoosePcs:black-blackPacks*10,ref:r.po_challan||'',note:r.remarks||''};
 }
 function krblIssueFromRow(r){
   return {id:r.id,date:r.issue_date,mandi:r.mandi_name||'',code:r.mandi_code||'',white:Number(r.white_roll_pcs||0),
@@ -496,53 +493,101 @@ function krblIssueFromRow(r){
 async function krblLoadCloud(){
   if(!krblSupabase || !krblUser) return;
   krblSetStatus('Cloud: loading shared records…');
-  const [rr,ii,roleResult]=await Promise.all([
+  const [rr,ii,profileResult,roleResult]=await Promise.all([
     krblSupabase.from('krbl_material_receipts').select('*').order('receipt_date',{ascending:false}),
     krblSupabase.from('krbl_mandi_issues').select('*').order('issue_date',{ascending:false}),
+    krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,role,area,active,assigned_mandis,work_permissions').eq('user_id',krblUser.id).maybeSingle(),
     krblSupabase.from('krbl_user_roles').select('role').eq('user_id',krblUser.id).maybeSingle()
   ]);
   if(rr.error) throw rr.error;
   if(ii.error) throw ii.error;
+  if(profileResult.error) throw profileResult.error;
   if(roleResult.error) throw roleResult.error;
-  krblRole=roleResult.data?.role||'viewer';
+  krblProfile=profileResult.data||null;
+  if(krblProfile?.active===false) throw new Error('This employee account is inactive. Contact KRBL Admin.');
+  krblRole=krblProfile?.role||roleResult.data?.role||'viewer';
+  krblWorkPermissions=Array.isArray(krblProfile?.work_permissions)?krblProfile.work_permissions:[];
   db={receipts:(rr.data||[]).map(krblReceiptFromRow),issues:(ii.data||[]).map(krblIssueFromRow),packConversionV2:true};
   krblEnsureIds();
+  krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));
+  krblInitialIds.issues=new Set(db.issues.map(r=>r.id));
+  krblBaseline.receipts=new Map(db.receipts.map(r=>[r.id,JSON.stringify(r)]));
+  krblBaseline.issues=new Map(db.issues.map(r=>[r.id,JSON.stringify(r)]));
   localStorage.setItem(KEY,JSON.stringify(db));
   krblCloudReady=true;
-  document.body.classList.toggle('krbl-viewer',krblRole!=='admin');
+  krblApplyPermissions();
   const gate=document.getElementById('krblAuthGate'); if(gate) gate.style.display='none';
-  krblSetStatus('Cloud connected • '+(krblRole==='admin'?'Admin':'Viewer'));
+  krblSetStatus('Cloud connected • '+krblRole.toUpperCase()+' • '+(krblProfile?.full_name||krblUser.email||'Employee'));
   render();
 }
+const krblBaseline={receipts:new Map(),issues:new Map()};
+function krblHasPermission(permission){
+  return krblRole==='admin'||krblWorkPermissions.includes(permission);
+}
+function krblCanAccessMandi(code,name){
+  if(krblRole==='admin') return true;
+  const assigned=Array.isArray(krblProfile?.assigned_mandis)?krblProfile.assigned_mandis:[];
+  return assigned.some(m=>{
+    if(typeof m==='string') return m.toUpperCase()===(String(code||'').toUpperCase())||m.toUpperCase()===(String(name||'').toUpperCase());
+    if(m?.code && code) return String(m.code).toUpperCase()===String(code).toUpperCase();
+    return !m?.code && String(m?.name||'').toUpperCase()===String(name||'').toUpperCase();
+  });
+}
+function krblApplyPermissions(){
+  const body=document.body;
+  body.classList.toggle('krbl-viewer',!krblHasPermission('receive')&&!krblHasPermission('issue'));
+  body.classList.toggle('krbl-no-receive',!krblHasPermission('receive'));
+  body.classList.toggle('krbl-no-issue',!krblHasPermission('issue'));
+  body.classList.toggle('krbl-no-edit',!krblHasPermission('edit_records')&&!krblHasPermission('cancel_records'));
+  body.classList.toggle('krbl-no-reports',!krblHasPermission('reports'));
+  body.classList.toggle('krbl-no-backup',krblRole!=='admin');
+  body.classList.toggle('krbl-no-history',!krblHasPermission('view_records'));
+  const adminButton=document.getElementById('krblAdminOpen');
+  if(adminButton) adminButton.style.display=krblRole==='admin'?'block':'none';
+  const equipmentButton=document.getElementById('digitalEquipmentNav');
+  const hasEquipmentWork=krblRole==='admin'||['equipment_receive','equipment_issue','equipment_return','equipment_transfer','equipment_view','equipment_edit','equipment_cancel','equipment_reports'].some(p=>krblWorkPermissions.includes(p));
+  if(equipmentButton) equipmentButton.style.display=hasEquipmentWork?'':'none';
+  const gutkaButton=document.getElementById('gutkaPrinterNav');
+  const hasGutkaWork=krblRole==='admin'||['gutka_view','gutka_receive','gutka_issue','gutka_import','gutka_edit','gutka_cancel','gutka_reports'].some(p=>krblWorkPermissions.includes(p));
+  if(gutkaButton) gutkaButton.style.display=hasGutkaWork?'':'none';
+}
 async function krblSyncAll(){
-  if(!krblSupabase || !krblCloudReady || krblRole!=='admin') return;
-  // Keep stable IDs so edits update the same cloud record.
-  const receiptRows=db.receipts.map(krblReceiptToRow);
-  const issueRows=db.issues.map(krblIssueToRow);
+  if(!krblSupabase||!krblCloudReady) return;
+  const currentR=new Map(db.receipts.map(r=>[r.id,r]));
+  const currentI=new Map(db.issues.map(r=>[r.id,r]));
+  const changedR=[...currentR.values()].filter(r=>krblBaseline.receipts.get(r.id)!==JSON.stringify(r));
+  const changedI=[...currentI.values()].filter(r=>krblBaseline.issues.get(r.id)!==JSON.stringify(r));
+  const removedR=[...krblBaseline.receipts.keys()].filter(id=>!currentR.has(id));
+  const removedI=[...krblBaseline.issues.keys()].filter(id=>!currentI.has(id));
+  if(changedR.length&&!krblHasPermission('receive')&&!krblHasPermission('edit_records')) throw new Error('Receive / Edit permission required.');
+  if(changedI.length&&!krblHasPermission('issue')&&!krblHasPermission('edit_records')) throw new Error('Issue / Edit permission required.');
+  if(removedR.length&&!krblHasPermission('cancel_records')) throw new Error('Cancel permission required for receipt records.');
+  if(removedI.length&&!krblHasPermission('cancel_records')) throw new Error('Cancel permission required for issue records.');
   const [rRes,iRes]=await Promise.all([
-    receiptRows.length?krblSupabase.from('krbl_material_receipts').upsert(receiptRows):Promise.resolve({error:null}),
-    issueRows.length?krblSupabase.from('krbl_mandi_issues').upsert(issueRows):Promise.resolve({error:null})
+    changedR.length?krblSupabase.from('krbl_material_receipts').upsert(changedR.map(krblReceiptToRow)):Promise.resolve({error:null}),
+    changedI.length?krblSupabase.from('krbl_mandi_issues').upsert(changedI.map(krblIssueToRow)):Promise.resolve({error:null})
   ]);
   if(rRes.error) throw rRes.error;
   if(iRes.error) throw iRes.error;
-  // Delete only rows previously loaded by this session and subsequently removed locally.
-  const oldReceipts=Array.from(krblInitialIds.receipts);
-  const oldIssues=Array.from(krblInitialIds.issues);
-  const nowR=new Set(db.receipts.map(r=>r.id)), nowI=new Set(db.issues.map(r=>r.id));
-  const delR=oldReceipts.filter(id=>!nowR.has(id)), delI=oldIssues.filter(id=>!nowI.has(id));
-  if(delR.length){const x=await krblSupabase.from('krbl_material_receipts').delete().in('id',delR);if(x.error)throw x.error;}
-  if(delI.length){const x=await krblSupabase.from('krbl_mandi_issues').delete().in('id',delI);if(x.error)throw x.error;}
+  for(const id of removedR){const x=await krblSupabase.from('krbl_material_receipts').delete().eq('id',id);if(x.error)throw x.error;}
+  for(const id of removedI){const x=await krblSupabase.from('krbl_mandi_issues').delete().eq('id',id);if(x.error)throw x.error;}
+  krblBaseline.receipts=new Map(db.receipts.map(r=>[r.id,JSON.stringify(r)]));
+  krblBaseline.issues=new Map(db.issues.map(r=>[r.id,JSON.stringify(r)]));
   krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));
   krblInitialIds.issues=new Set(db.issues.map(r=>r.id));
-  krblSetStatus('Cloud saved • Admin');
+  krblSetStatus('Cloud saved • '+krblRole.toUpperCase());
 }
 async function krblSignIn(){
-  if(!krblSupabase){krblAuthMessage('Please fill Supabase URL and publishable key in supabase-config.js, then reload.');return;}
-  const email=document.getElementById('krblEmail').value.trim();
+  if(!krblSupabase){krblAuthMessage('Supabase connection is not configured. Contact KRBL Admin.');return;}
+  const identifier=document.getElementById('krblIdentifier').value.trim();
   const password=document.getElementById('krblPassword').value;
-  if(!email||!password){krblAuthMessage('Enter your work email and password.');return;}
-  const {data,error}=await krblSupabase.auth.signInWithPassword({email,password});
-  if(error){krblAuthMessage(error.message);return;}
+  if(!identifier||!password){krblAuthMessage('Enter Employee ID or Username and password.');return;}
+  krblAuthMessage('Verifying employee account…');
+  const {data,error}=await krblSupabase.functions.invoke('employee-login',{body:{identifier,password}});
+  if(error||data?.error){krblAuthMessage(data?.error||error?.message||'Login failed.');return;}
+  if(!data?.session?.access_token||!data?.session?.refresh_token){krblAuthMessage('Login service returned an incomplete session. Contact KRBL Admin.');return;}
+  const {error:sessionError}=await krblSupabase.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+  if(sessionError){krblAuthMessage('Could not start session: '+sessionError.message);return;}
   krblUser=data.user;
   try{
     await krblLoadCloud();
@@ -554,9 +599,35 @@ async function krblSignUp(){
   if(!krblSupabase){krblAuthMessage('Please fill Supabase URL and publishable key in supabase-config.js, then reload.');return;}
   const email=document.getElementById('krblEmail').value.trim();
   const password=document.getElementById('krblPassword').value;
-  if(!email||password.length<8){krblAuthMessage('Enter your email and a password of at least 8 characters.');return;}
-  const {error}=await krblSupabase.auth.signUp({email,password});
-  krblAuthMessage(error?error.message:'Signup request submitted. Confirm your email if Supabase asks, then sign in. New accounts are Viewer by default.');
+  if(!email||password.length<8){krblAuthMessage('Enter your work email and a password of at least 8 characters.');return;}
+  const {data,error}=await krblSupabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+  krblAuthMessage(error?error.message:'Account request submitted. Check your email to confirm the account if confirmation is enabled. New accounts are Viewer by default.');
+}
+async function krblForgotPassword(){
+  if(!krblSupabase){krblAuthMessage('Cloud login is not configured. Please contact the system administrator.');return;}
+  const email=document.getElementById('krblEmail').value.trim();
+  if(!email){krblAuthMessage('Enter your work email first, then click Forgot password.');return;}
+  const {error}=await krblSupabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  krblAuthMessage(error?error.message:'If this email is registered, a password reset link has been sent. Please check your inbox and spam folder.');
+}
+async function krblSetNewPassword(){
+  if(!krblSupabase){krblAuthMessage('Cloud login is not configured.');return;}
+  const password=document.getElementById('krblNewPassword').value;
+  if(password.length<8){krblAuthMessage('Choose a password with at least 8 characters.');return;}
+  const {error}=await krblSupabase.auth.updateUser({password});
+  if(error){krblAuthMessage(error.message);return;}
+  document.getElementById('krblNewPassword').style.display='none';
+  document.getElementById('krblNewPasswordLabel').style.display='none';
+  document.getElementById('krblSetNewPassword').style.display='none';
+  document.getElementById('krblPassword').style.display='block';
+  document.querySelector('label[for="krblPassword"]').style.display='block';
+  document.getElementById('krblSignIn').style.display='inline-block';
+  krblAuthMessage('Password updated successfully. You can now continue using the dashboard.');
+}
+async function krblLogout(){
+  if(!krblSupabase)return;
+  const {error}=await krblSupabase.auth.signOut();
+  if(error)alert('Could not log out: '+error.message);
 }
 (function krblInitCloud(){
   const cfg=window.KRBL_SUPABASE_CONFIG||{};
@@ -566,87 +637,26 @@ async function krblSignUp(){
   }
   krblSupabase=window.supabase.createClient(cfg.url,cfg.publishableKey);
   document.getElementById('krblSignIn').addEventListener('click',krblSignIn);
-  document.getElementById('krblSignUp').addEventListener('click',krblSignUp);
+  document.getElementById('krblSetNewPassword').addEventListener('click',krblSetNewPassword);
+  document.getElementById('krblLogoutBtn').addEventListener('click',krblLogout);
   krblSupabase.auth.getSession().then(async ({data})=>{
     if(data.session){krblUser=data.session.user;try{await krblLoadCloud();krblInitialIds.receipts=new Set(db.receipts.map(r=>r.id));krblInitialIds.issues=new Set(db.issues.map(r=>r.id));}catch(e){krblAuthMessage('Cloud connection error: '+e.message);}}
   });
   krblSupabase.auth.onAuthStateChange((event,session)=>{
     if(event==='SIGNED_OUT'){location.reload();}
+    if(event==='PASSWORD_RECOVERY'){
+      const gate=document.getElementById('krblAuthGate'); if(gate)gate.style.display='flex';
+      document.getElementById('krblSignIn').style.display='none';
+      document.getElementById('krblPassword').style.display='none';
+      document.querySelector('label[for="krblPassword"]').style.display='none';
+      document.getElementById('krblNewPassword').style.display='block';
+      document.getElementById('krblNewPasswordLabel').style.display='block';
+      document.getElementById('krblSetNewPassword').style.display='inline-block';
+      krblAuthMessage('Enter your new password below.');
+    }
   });
 })();
 render();
-</script>
-
-<script>
-(function(){
- // Printing CSV data is kept in memory only for temporary calculation; never persisted.
- let printingRows=[];
- const $p=id=>document.getElementById(id);
- const fmt=v=>Number(v||0).toLocaleString('en-IN');
- function issueCapacity(mandi,code){
-  const rows=(db.issues||[]).filter(r=>{
-   if(code && String(r.code||'').trim()) return String(r.code||'').trim().toLowerCase()===code.toLowerCase();
-   return String(r.mandi||'').trim().toLowerCase()===String(mandi||'').trim().toLowerCase();
-  });
-  return rows.reduce((sum,r)=>sum+Math.min(Number(r.white||0)*800,Number(r.black||0)*4000),0);
- }
- function renderPrinting(){
-  const mandi=($p('printingMandi')?.value||'').trim()||'Narela';
-  const code=($p('printingCode')?.value||'').trim();
-  const rows=printingRows.filter(r=>String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && (!code || String(r.code||'').toLowerCase()===code.toLowerCase()));
-  const printed=rows.reduce((a,r)=>a+Number(r.printed||0),0);
-  const capacity=issueCapacity(mandi,code);
-  const pct=capacity>0?(printed/capacity*100):0;
-  $p('printingTotal').textContent=fmt(printed);
-  $p('printingCapacity').textContent=fmt(capacity);
-  $p('printingPercent').textContent=capacity>0?pct.toFixed(2)+'%':'—';
-  $p('printingRemaining').textContent=fmt(capacity-printed);
-  const grouped=new Map();
-  for(const r of printingRows){
-   const k=String(r.mandi||'Unknown')+'|'+String(r.code||'');
-   if(!grouped.has(k)) grouped.set(k,{mandi:r.mandi||'Unknown',code:r.code||'',count:0,printed:0});
-   const x=grouped.get(k);x.count++;x.printed+=Number(r.printed||0);
-  }
-  const data=[...grouped.values()].filter(x=>x.mandi.toLowerCase()===mandi.toLowerCase() && (!code || String(x.code).toLowerCase()===code.toLowerCase()));
-  $p('printingSummaryRows').innerHTML=data.length?data.map(x=>{
-   const cap=issueCapacity(x.mandi,x.code),p=cap>0?(x.printed/cap*100).toFixed(2)+'%':'—';
-   return '<tr><td>'+x.mandi+(x.code?' ('+x.code+')':'')+'</td><td>'+fmt(x.count)+'</td><td class="num">'+fmt(x.printed)+'</td><td class="num">'+fmt(cap)+'</td><td class="num"><strong>'+p+'</strong></td></tr>';
-  }).join(''):'<tr><td colspan="5" class="empty">No printing rows for this mandi. Import a CSV to begin.</td></tr>';
- }
- function parseCSV(text){
-  const out=[];let row=[],field='',quoted=false;
-  for(let i=0;i<text.length;i++){const c=text[i];
-   if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++}else if(c==='"')quoted=false;else field+=c}
-   else if(c==='"')quoted=true;else if(c===','){row.push(field);field=''}else if(c==='\n'){row.push(field);out.push(row);row=[];field=''}else if(c!=='\r')field+=c;
-  }
-  if(field.length||row.length){row.push(field);out.push(row)}
-  return out;
- }
- $p('importPrintingCsv')?.addEventListener('click',async()=>{
-  const file=$p('printingCsv')?.files?.[0];if(!file){alert('Please select GutkaLogs CSV first.');return}
-  const mandi=($p('printingMandi').value||'').trim()||'Narela',code=($p('printingCode').value||'').trim();
-  const data=parseCSV(await file.text());if(data.length<2){alert('CSV has no data rows.');return}
-  const headers=data[0].map(x=>x.trim().toLowerCase());
-  const idx=headers.indexOf('printed'),gutkaIdx=headers.findIndex(x=>x.includes('gutka')),bagsIdx=headers.findIndex(x=>x.includes('type of bags'));
-  if(idx<0||gutkaIdx<0){alert('Required columns Gutka No and Printed were not found.');return}
-  const incoming=data.slice(1).filter(r=>r.some(v=>String(v||'').trim())).map(r=>({mandi,code,gutka:String(r[gutkaIdx]||'').trim(),bagType:bagsIdx>=0?String(r[bagsIdx]||'').trim():'',printed:Number(String(r[idx]||'').replace(/,/g,''))||0,importedAt:new Date().toISOString()})).filter(r=>r.gutka);
-  if(!incoming.length){alert('No valid printing records found.');return}
-  printingRows=printingRows.filter(r=>!(String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && String(r.code||'').toLowerCase()===code.toLowerCase())).concat(incoming);
-    $p('printingImportMessage').textContent=incoming.length+' printing records imported for '+mandi+'. Total printed tags: '+fmt(incoming.reduce((a,r)=>a+r.printed,0))+'. Re-importing this mandi/code replaces its previous imported rows only.';
-  renderPrinting();
- });
- $p('refreshPrinting')?.addEventListener('click',renderPrinting);
- $p('clearPrinting')?.addEventListener('click',()=>{
-  printingRows=[];
-  const fileInput=$p('printingCsv');if(fileInput)fileInput.value='';
-  $p('printingImportMessage').textContent='Temporary printing data cleared. No printing CSV data is stored.';
-  renderPrinting();
- });
- $p('printingMandi')?.addEventListener('input',renderPrinting);
- $p('printingCode')?.addEventListener('input',renderPrinting);
- document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(renderPrinting,0));
- renderPrinting();
-})();
 </script>
 
 <script>
@@ -656,6 +666,12 @@ render();
     const buttons = Array.from(document.querySelectorAll('.sidebar [data-page]'));
     if(!views.length || !buttons.length) return;
     function showPage(id){
+      if(krblCloudReady){
+        if(id==='receipt'&&!krblHasPermission('receive')) id='dashboard';
+        if(id==='issue'&&!krblHasPermission('issue')) id='dashboard';
+        if((id==='issue-history'||id==='receipt-history')&&!krblHasPermission('view_records')) id='dashboard';
+        if(id==='backup'&&krblRole!=='admin') id='dashboard';
+      }
       views.forEach(v => v.classList.toggle('active', v.id === 'page-' + id));
       buttons.forEach(b => b.classList.toggle('active', b.dataset.page === id));
       try { sessionStorage.setItem('krblActivePage_v2', id); } catch(e) {}
@@ -669,4 +685,221 @@ render();
 })();
 </script>
 
+<script id="krblAdminPanelV2">
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    #krblAdminOpen{position:fixed;left:12px;bottom:12px;z-index:1001;background:#004b2c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:700;box-shadow:0 3px 12px #0002;display:none}
+    #krblAdminModal{position:fixed;inset:0;z-index:1002;background:#001b11aa;display:none;align-items:center;justify-content:center;padding:16px}
+    #krblAdminModal .panel{width:min(900px,100%);max-height:88vh;overflow:auto;background:#fffdf7;border:2px solid #e99a2d;border-radius:16px;padding:20px;color:#243328}
+    #krblAdminModal h2{color:#004b2c;margin:0 0 8px}
+    #krblAdminModal input,#krblAdminModal select{padding:10px;border:1px solid #d8c7a7;border-radius:8px;max-width:100%;box-sizing:border-box;width:100%}#krblAdminMandis{height:170px!important;overflow-y:auto;background:#fff}
+    #krblAdminModal button{padding:9px 12px;border:0;border-radius:8px;background:#008044;color:white;font-weight:700;cursor:pointer}
+    #krblAdminModal .secondary{background:#f7e3bd;color:#243328}
+    #krblAdminRoles{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+    #krblAdminRoles th,#krblAdminRoles td{padding:8px;border-bottom:1px solid #eadfca;text-align:left;overflow-wrap:anywhere}
+    #krblAdminRoles th{background:#006b3f;color:white}
+    #krblAdminMsg{white-space:pre-wrap;font-size:13px;margin-top:10px}
+    #krblAdminModal .adminGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    #krblAdminModal .adminField{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
+    #krblAdminModal .adminWide{grid-column:1/-1}
+    #krblAdminModal .krblPermissionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+    #krblAdminModal .krblPermissionGrid label{display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid #e3d4b8;border-radius:9px;background:#fff;font-weight:600}
+    #krblAdminModal .krblPermissionGrid input{width:auto;margin:2px 0 0;accent-color:#008044}
+    #krblAdminModal .krblPermissionGrid small{display:block;font-weight:400;color:#65736a}
+    @media(max-width:600px){#krblAdminModal .krblPermissionGrid{grid-template-columns:1fr}}
+    body.krbl-no-receive #page-receipt form,body.krbl-no-issue #page-issue form{display:none!important}
+body.krbl-no-edit .action-buttons{display:none!important}
+body.krbl-no-reports .report-actions,body.krbl-no-reports #page-issue-history .actions.no-print{display:none!important}
+body.krbl-no-backup [data-page="backup"]{display:none!important}
+body.krbl-no-issue [data-page="issue"],body.krbl-no-receive [data-page="receipt"]{display:none!important}
+body.krbl-no-history [data-page="issue-history"],body.krbl-no-history [data-page="receipt-history"]{display:none!important}
+body.krbl-viewer #krblAdminOpen{display:none!important}
+    @media(max-width:600px){#krblAdminModal .adminGrid{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+  const btn=document.createElement('button');btn.id='krblAdminOpen';btn.type='button';btn.textContent='User Management';
+  const modal=document.createElement('div');modal.id='krblAdminModal';modal.innerHTML=`
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="krblAdminTitle">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="krblAdminTitle">KRBL User Management</h2><button type="button" class="secondary" id="krblAdminClose">Close</button></div>
+      <p id="krblAdminWho"></p>
+      <div class="notice" style="margin:12px 0">Admin creates an employee login using Employee ID, Username and an initial password. No email invitation is sent.</div>
+      <div class="adminGrid" style="margin:14px 0">
+        <button type="button" id="krblOfficeTab">OFFICE — Users, roles & activity</button>
+        <button type="button" id="krblTeamTab" class="secondary">TEAM — Mandi operations</button>
+      </div>
+      <section id="krblOfficeSection">
+        <h3>Office Control Centre</h3>
+        <p>Office manages user profiles, role assignment, mandi access and activity review.</p>
+        <div class="notice"><b>Role permissions</b><br>Super Admin: full system/user management. Office: view all mandis, reports and activity; manage users only if authorized by Super Admin. Team: enter/update work only for assigned mandis. Viewer: read-only access.</div>
+        <button id="krblActivityRefresh" type="button" class="secondary">Refresh activity log</button>
+        <div id="krblActivityList">Activity log will appear here if the audit table is configured and Office/Admin read permission is granted.</div>
+      </section>
+      <section id="krblTeamSection" style="display:none">
+        <h3>Team Work Area</h3>
+        <p>Team users should see all mandi records, but create/edit only within assigned mandi access. The assignment list is managed from the employee profile below.</p>
+        <ul><li>Assigned mandi selection</li><li>Daily receipt/issue entry and status checks</li><li>Record history and discrepancy follow-up</li><li>All changes should be audit logged</li></ul>
+        <p><b>Security note:</b> actual Office/Team restrictions must be enforced by Supabase RLS policies before this is treated as secure.</p>
+      </section>
+      <h3>Register / update employee profile</h3>
+      <div class="adminGrid">
+        <input id="krblAdminUid" type="hidden" value="">
+        <label class="adminField">Employee name<input id="krblAdminName" placeholder="e.g. Rajesh Kumar"></label>
+        <label class="adminField">Employee ID<input id="krblAdminEmpId" placeholder="e.g. EMP001"></label>
+        <label class="adminField">Username<input id="krblAdminUsername" autocomplete="off" placeholder="e.g. GOVIND01"></label>
+        <label class="adminField">Initial Password<input id="krblAdminInitialPassword" type="password" autocomplete="new-password" placeholder="Minimum 10 characters"></label>
+        <label class="adminField">Dashboard role<select id="krblAdminRole"><option value="admin">Super Admin</option><option value="office">Office</option><option value="team">Team</option><option value="viewer">Viewer</option></select><span id="krblRoleWorkHint" style="font-weight:400;color:#52645a">Super Admin: full system access and user management.</span></label>
+        <label class="adminField">Department / access group<select id="krblAdminArea"><option value="office">Office</option><option value="team">Team</option></select></label>
+        <div class="adminField adminWide" id="krblWorkPermissionPanel">
+          <b>Assign work permissions — select each task manually</b>
+          <div class="krblPermissionGrid">
+            <label><input type="checkbox" data-work-permission="receive"><span>Receive material<small>Enter new stock received in store</small></span></label>
+            <label><input type="checkbox" data-work-permission="issue"><span>Issue material to mandi<small>Record material issued to a mandi</small></span></label>
+            <label><input type="checkbox" data-work-permission="view_records"><span>View transactions<small>See receipt and issue history</small></span></label>
+            <label><input type="checkbox" data-work-permission="edit_records"><span>Edit transactions<small>Correct existing transaction details</small></span></label>
+            <label><input type="checkbox" data-work-permission="cancel_records"><span>Cancel transactions<small>Cancel an incorrect transaction</small></span></label>
+            <label><input type="checkbox" data-work-permission="reports"><span>View / export reports<small>Print and export Excel reports</small></span></label>
+            <label><input type="checkbox" data-work-permission="activity_log"><span>View activity log<small>Review employee actions</small></span></label>
+            <label><input type="checkbox" data-work-permission="manage_users"><span>Manage employees<small>Create users and assign work</small></span></label>
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ead9b8"><b>Digital Equipment Register — assign separately</b>
+          <div class="krblPermissionGrid">
+            <label><input type="checkbox" data-work-permission="equipment_receive"><span>Equipment Receive<small>Record equipment received into store</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_issue"><span>Equipment Issue<small>Issue equipment to assigned mandis</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_return"><span>Equipment Return<small>Receive returned equipment from mandis</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_transfer"><span>Equipment Transfer Out<small>Transfer equipment to another plant / location</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_view"><span>Equipment Transactions & Verification<small>View equipment stock and transaction history</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_edit"><span>Edit Equipment Transactions<small>Correct existing equipment records</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_cancel"><span>Cancel Equipment Transactions<small>Cancel an incorrect equipment transaction</small></span></label>
+            <label><input type="checkbox" data-work-permission="equipment_reports"><span>Equipment Reports<small>View and export equipment reports</small></span></label>
+          </div></div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ead9b8"><b>Gutka Printer Management — assign separately</b>
+          <div class="krblPermissionGrid">
+            <label><input type="checkbox" data-work-permission="gutka_view"><span>View Gutka Printer Records<small>View stock, transaction history and printer details</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_receive"><span>Gutka Printer Receive<small>Enter printers and devices received in store</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_issue"><span>Gutka Printer Issue<small>Issue printers and devices to assigned mandis</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_import"><span>Historical Excel Import<small>Import old Receive, Issue and rack-wise records</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_edit"><span>Edit Gutka Transactions<small>Correct existing printer transactions</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_cancel"><span>Cancel Gutka Transactions<small>Cancel an incorrect printer transaction</small></span></label>
+            <label><input type="checkbox" data-work-permission="gutka_reports"><span>Gutka Reports<small>View and export printer reports</small></span></label>
+          </div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="krblSelectAllWork" type="button" class="secondary">Select all work</button><button id="krblClearWork" type="button" class="secondary">Clear work</button></div>
+          <span style="font-weight:400;color:#596658">These selections save assigned responsibilities. Database-level enforcement will be completed separately before relying on them as security restrictions.</span>
+        </div>
+        <label class="adminField adminWide">Assigned mandis — scroll and select one or more
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="krblSelectAllMandis" type="button" class="secondary">Select All Mandis</button>
+            <button id="krblClearMandis" type="button" class="secondary">Clear Selection</button>
+          </div>
+          <select id="krblAdminMandis" multiple size="10" style="min-height:220px">
+            <option disabled>Loading mandi list…</option>
+          </select>
+          <span style="font-weight:400;color:#596658">Select All Mandis assigns every mandi currently listed. You can also select individual mandis with Ctrl-click.</span>
+        </label>
+        <label class="adminField">Account status<select id="krblAdminActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
+        <div class="adminField" style="justify-content:end;gap:8px"><button id="krblAdminInvite" type="button">Create Employee Account</button><button id="krblAdminSave" type="button" class="secondary">Save existing profile</button></div>
+      </div>
+      <div id="krblAdminMsg" role="status"></div>
+      <h3 style="margin-top:22px">Registered employees</h3>
+      <button id="krblAdminRefresh" type="button" class="secondary">Refresh list</button>
+      <div id="krblAdminList">Click Refresh list to load employee profiles.</div>
+    </div>`;
+  document.body.appendChild(btn);document.body.appendChild(modal);
+  const el=id=>document.getElementById(id);
+  const msg=s=>{el('krblAdminMsg').textContent=s;};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const knownMandis=[
+    ['D019','Narela'],['D006','Najafgarh'],['H061','Gohana'],['H087','Jiwan Nagar'],['H018','Jiwan Nagar'],['H072','Sirsa'],['H088','Sonepat'],['H029','Narnaund'],['','Rohtak'],['','Barwala']
+  ];
+  const mandiKey=(code,name)=>String(code||'').trim().toUpperCase()+'|'+String(name||'').trim();
+  async function loadMandiOptions(selected=[]){
+    const select=el('krblAdminMandis');
+    const found=new Map();
+    knownMandis.forEach(([code,name])=>{const key=mandiKey(code,name);if(name)found.set(key,{code,name});});
+    if(krblSupabase){
+      const res=await krblSupabase.from('krbl_mandi_issues').select('mandi_code,mandi_name').limit(5000);
+      if(!res.error)(res.data||[]).forEach(r=>{if(r.mandi_name||r.mandi_code){const key=mandiKey(r.mandi_code,r.mandi_name);found.set(key,{code:r.mandi_code||'',name:r.mandi_name||r.mandi_code||'Unnamed Mandi'});}});
+    }
+    // Remove name-only fallback duplicates whenever the same mandi name has a coded record.
+    const all=[...found.entries()];
+    const codedNames=new Set(all.filter(([,m])=>m.code).map(([,m])=>String(m.name||'').trim().toLowerCase()));
+    const filtered=all.filter(([,m])=>m.code||!codedNames.has(String(m.name||'').trim().toLowerCase()));
+    const sorted=filtered.sort((a,b)=>(a[1].name+' '+a[1].code).localeCompare(b[1].name+' '+b[1].code));
+    select.innerHTML=sorted.map(([key,m])=>'<option value="'+esc(key)+'">'+esc(m.name+(m.code?' ('+m.code+')':''))+'</option>').join('');
+    const selectedKeys=new Set(selected.map(m=>mandiKey(m.code,m.name)));
+    [...select.options].forEach(o=>o.selected=selectedKeys.has(o.value));
+  }
+  const getSelectedMandis=()=>[...el('krblAdminMandis').selectedOptions].map(o=>{const parts=o.value.split('|');return {code:parts[0],name:parts.slice(1).join('|')};});
+  const workPermissionLabels={receive:'Receive material',issue:'Issue material to mandi',view_records:'View transactions',edit_records:'Edit transactions',cancel_records:'Cancel transactions',reports:'View / export reports',activity_log:'View activity log',manage_users:'Manage employees',equipment_receive:'Equipment Receive',equipment_issue:'Equipment Issue',equipment_return:'Equipment Return',equipment_transfer:'Equipment Transfer Out',equipment_view:'Equipment Transactions & Verification',equipment_edit:'Edit Equipment Transactions',equipment_cancel:'Cancel Equipment Transactions',equipment_reports:'Equipment Reports',gutka_view:'View Gutka Printer Records',gutka_receive:'Gutka Printer Receive',gutka_issue:'Gutka Printer Issue',gutka_import:'Historical Gutka Excel Import',gutka_edit:'Edit Gutka Transactions',gutka_cancel:'Cancel Gutka Transactions',gutka_reports:'Gutka Reports'};
+  const getSelectedWork=()=>[...document.querySelectorAll('[data-work-permission]:checked')].map(x=>x.dataset.workPermission);
+  const setSelectedWork=(items=[])=>document.querySelectorAll('[data-work-permission]').forEach(x=>{x.checked=items.includes(x.dataset.workPermission);});
+  const roleWorkHints={admin:'Super Admin: full system access, employee management, all reports and activity monitoring.',office:'Office: view records and reports, coordinate users and office operations; choose exact duties below.',team:'Team: perform assigned mandi operations only; choose the exact duties below.',viewer:'Viewer: read-only access; normally choose View transactions and reports only.'};
+  el('krblAdminRole').addEventListener('change',()=>{const role=el('krblAdminRole').value;el('krblRoleWorkHint').textContent=roleWorkHints[role]||'';el('krblAdminArea').value=role==='office'?'office':'team';});
+  el('krblSelectAllWork').addEventListener('click',()=>{document.querySelectorAll('[data-work-permission]').forEach(x=>x.checked=true);msg('All work permissions selected. Save the employee to apply.');});
+  el('krblClearWork').addEventListener('click',()=>{setSelectedWork([]);msg('Work permissions cleared. Save the employee to apply.');});
+  async function loadProfiles(){
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const host=el('krblAdminList');host.textContent='Loading employee profiles…';await loadMandiOptions();
+    const res=await krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username,email,role,department,area,mandi_code,mandi_name,assigned_mandis,work_permissions,active,last_login_at,last_activity_at,created_at').order('full_name',{ascending:true}).limit(300);
+    if(res.error){host.textContent='Could not load employee profiles: '+res.error.message+' (code '+(res.error.code||'n/a')+'). Confirm SQL ran in this same Supabase project and admin role is present.';msg('Load failed: '+res.error.message);return;}
+    if(!res.data.length){host.textContent='No employee profiles registered yet.';return;}
+    host.innerHTML='<table id="krblAdminRoles"><thead><tr><th>Employee</th><th>Employee ID</th><th>Username</th><th>Role</th><th>Assigned work</th><th>Area</th><th>Assigned mandis</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead><tbody>'+res.data.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.employee_id||'—')+'</td><td>'+esc(p.username||'—')+'</td><td>'+esc(p.role||'—')+'</td><td>'+esc((p.work_permissions||[]).map(k=>workPermissionLabels[k]||k).join(', ')||'No work assigned')+'</td><td>'+esc(p.area||p.department||'—')+'</td><td>'+esc((p.assigned_mandis||[]).map(x=>typeof x==='string'?x:[x.name,x.code?'('+x.code+')':''].filter(Boolean).join(' ')).join(', ')||[p.mandi_code,p.mandi_name].filter(Boolean).join(' · ')||'—')+'</td><td>'+((p.active===false)?'Inactive':'Active')+'</td><td>'+esc(p.last_login_at?new Date(p.last_login_at).toLocaleString():'Never')+'</td><td><button type="button" data-profile-uid="'+esc(p.user_id)+'" class="secondary krblEditProfile">Edit</button> <button type="button" data-reset-uid="'+esc(p.user_id)+'" class="secondary krblResetPassword">Reset Password</button></td></tr>').join('')+'</tbody></table>';
+    host.querySelectorAll('.krblEditProfile').forEach(b=>b.addEventListener('click',async()=>{const p=res.data.find(x=>x.user_id===b.dataset.profileUid);if(!p)return;el('krblAdminUid').value=p.user_id;el('krblAdminName').value=p.full_name||'';el('krblAdminEmpId').value=p.employee_id||'';el('krblAdminUsername').value=p.username||'';el('krblAdminInitialPassword').value='';el('krblAdminRole').value=p.role||'viewer';el('krblRoleWorkHint').textContent=roleWorkHints[el('krblAdminRole').value]||'';setSelectedWork(p.work_permissions||[]);el('krblAdminArea').value=p.area||'team';await loadMandiOptions(p.assigned_mandis||((p.mandi_code||p.mandi_name)?[{code:p.mandi_code||'',name:p.mandi_name||''}]:[]));el('krblAdminActive').value=String(p.active!==false);msg('Loaded profile for '+(p.full_name||p.user_id)+'.');}));
+    host.querySelectorAll('.krblResetPassword').forEach(b=>b.addEventListener('click',async()=>{const target=res.data.find(x=>x.user_id===b.dataset.resetUid);if(!target)return;const password=prompt('Set a new password for '+target.full_name+' (minimum 10 characters):');if(password===null)return;if(password.length<10){msg('Password must contain at least 10 characters.');return;}msg('Updating employee password…');const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'reset_password',user_id:target.user_id,password}});if(error||data?.error){msg('Password reset failed: '+(data?.error||error?.message||'Unknown error'));return;}msg('Password reset successfully for '+target.full_name+'. Share it securely.');}));
+  }
+  btn.addEventListener('click',async()=>{modal.style.display='flex';el('krblAdminWho').textContent='Signed in: '+(krblUser?.user_metadata?.full_name||krblUser?.email||'current user')+' • Role: '+(krblRole||'unknown');await loadProfiles();});
+  el('krblAdminClose').addEventListener('click',()=>modal.style.display='none');
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+  el('krblAdminRefresh').addEventListener('click',loadProfiles);
+  el('krblOfficeTab').addEventListener('click',()=>{el('krblOfficeSection').style.display='block';el('krblTeamSection').style.display='none';el('krblOfficeTab').classList.remove('secondary');el('krblTeamTab').classList.add('secondary');});
+  el('krblTeamTab').addEventListener('click',()=>{el('krblOfficeSection').style.display='none';el('krblTeamSection').style.display='block';el('krblTeamTab').classList.remove('secondary');el('krblOfficeTab').classList.add('secondary');});
+  el('krblActivityRefresh').addEventListener('click',async()=>{const host=el('krblActivityList');host.textContent='Loading activity…';const [res,profiles]=await Promise.all([krblSupabase.from('krbl_activity_log').select('actor_id,action,entity,entity_id,mandi_code,old_data,new_data,occurred_at').order('occurred_at',{ascending:false}).limit(100),krblSupabase.from('krbl_team_profiles').select('user_id,full_name,employee_id,username')]);if(res.error){host.textContent='Activity log unavailable: '+res.error.message;return;}if(!res.data.length){host.textContent='No activity recorded yet.';return;}const actorMap=new Map((profiles.data||[]).map(p=>[p.user_id,(p.full_name||'')+(p.employee_id?' ('+p.employee_id+')':'')+(p.username?' / '+p.username:'')]));host.innerHTML='<div style="overflow:auto"><table id="krblAdminRoles"><thead><tr><th>Time</th><th>Employee</th><th>Action</th><th>Entity</th><th>Record</th><th>Mandi</th><th>Change details</th></tr></thead><tbody>'+res.data.map(x=>'<tr><td>'+esc(new Date(x.occurred_at).toLocaleString())+'</td><td>'+esc(actorMap.get(x.actor_id)||x.actor_id||'System')+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity||'—')+'</td><td>'+esc(x.entity_id||'—')+'</td><td>'+esc(x.mandi_code||'—')+'</td><td><details><summary>View</summary><pre style="white-space:pre-wrap;max-width:320px">'+esc(JSON.stringify({old:x.old_data,new:x.new_data},null,2))+'</pre></details></td></tr>').join('')+'</tbody></table></div>';});
+  el('krblSelectAllMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=true);msg('All '+el('krblAdminMandis').options.length+' listed mandis selected. Save the employee profile to apply this assignment.');});
+  el('krblClearMandis').addEventListener('click',()=>{[...el('krblAdminMandis').options].forEach(o=>o.selected=false);msg('Mandi selection cleared. Save the employee profile to apply this change.');});
+  el('krblAdminInvite').addEventListener('click',async()=>{
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const name=el('krblAdminName').value.trim();
+    const empId=el('krblAdminEmpId').value.trim().toUpperCase();
+    const username=el('krblAdminUsername').value.trim().toLowerCase();
+    const password=el('krblAdminInitialPassword').value;
+    const role=el('krblAdminRole').value, area=el('krblAdminArea').value;
+    const assigned_mandis=getSelectedMandis();
+    if(!name||!empId||!username||!password){msg('Enter name, Employee ID, Username and initial password.');return;}
+    if(password.length<10){msg('Initial password must contain at least 10 characters.');return;}
+    if(!['office','team','viewer'].includes(role)){msg('New employee role must be Office, Team or Viewer. Super Admin cannot be assigned here.');return;}
+    if(role==='team'&&!assigned_mandis.length){msg('Select at least one mandi for a Team employee.');return;}
+    msg('Creating employee account…');
+    const {data,error}=await krblSupabase.functions.invoke('manage-employee',{body:{action:'create',full_name:name,employee_id:empId,username,password,role,area,assigned_mandis,work_permissions:getSelectedWork()}});
+    if(error||data?.error){let detail=data?.error||'';if(!detail&&error?.context){try{const body=await error.context.clone().json();detail=body?.error||body?.message||JSON.stringify(body);}catch{try{detail=await error.context.clone().text();}catch{}}}msg('Account creation failed: '+(detail||error?.message||'Unknown error'));return;}
+    el('krblAdminUid').value=data.user_id||'';
+    el('krblAdminInitialPassword').value='';
+    msg('Employee account created. Employee ID: '+data.employee_id+' | Username: '+data.username+'. No email was sent. Share the initial password securely.');
+    await loadProfiles();
+  });
+  el('krblAdminSave').addEventListener('click',async()=>{
+    if(!krblSupabase||krblRole!=='admin'){msg('Admin permission required.');return;}
+    const name=el('krblAdminName').value.trim(), empId=el('krblAdminEmpId').value.trim(), username=el('krblAdminUsername').value.trim().toLowerCase();
+    const uid=el('krblAdminUid').value.trim();
+    const role=el('krblAdminRole').value, area=el('krblAdminArea').value, active=el('krblAdminActive').value==='true';
+    const selectedMandis=getSelectedMandis();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){msg('Select an existing employee from the Registered employees list before saving changes.');return;}
+    if(!name){msg('Enter employee name.');return;}
+    if(!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)){msg('Enter a valid username (3–32 letters, numbers, dot, underscore or hyphen).');return;}
+    if(uid!==krblUser?.id&&role==='admin'){msg('Super Admin role can only be assigned through a separate owner-approved process.');return;}
+    if(uid===krblUser?.id&&role!=='admin'){msg('You cannot remove your own Super Admin role here.');return;}
+    const assigned_mandis=selectedMandis;const codes=assigned_mandis.map(x=>x.code).filter(Boolean), names=assigned_mandis.map(x=>x.name).filter(Boolean);
+    msg('Saving employee profile…');
+    const work_permissions=getSelectedWork();const profile={user_id:uid,full_name:name,employee_id:empId||null,username,role,department:area,area,mandi_code:codes[0]||null,mandi_name:names[0]||null,assigned_mandis,work_permissions,active};
+    const pr=await krblSupabase.from('krbl_team_profiles').upsert(profile,{onConflict:'user_id'});
+    if(pr.error){msg('Profile save failed: '+pr.error.message+' — ensure the updated SQL setup has been run in Supabase.');return;}
+    const rr=await krblSupabase.from('krbl_user_roles').upsert({user_id:uid,role},{onConflict:'user_id'});
+    if(rr.error){msg('Profile saved, but role update failed: '+rr.error.message);return;}
+    msg('Employee profile, username, role and mandi assignment saved. Password changes are managed by Super Admin.');
+    await loadProfiles();
+  });
+  const syncVisibility=()=>{btn.style.display=(krblCloudReady&&krblRole==='admin')?'block':'none';};
+  const timer=setInterval(()=>{syncVisibility();if(krblCloudReady)clearInterval(timer);},500);
+  document.addEventListener('visibilitychange',syncVisibility);
+})();
+</script>
 </body></html>
