@@ -258,7 +258,7 @@ body.krbl-viewer #restoreJsonBtn{display:none!important}
   <div class="full"><label for="printingCsv">Upload Gutka Printing Logs CSV</label><input id="printingCsv" type="file" accept=".csv,text/csv"></div>
  </div>
  <p class="hint">Import the GutkaLogs CSV containing Gutka No, Type Of Bags, Total Label (with Tol.), Printed and Rate (INR). The printed count is taken from the Printed column.</p>
- <div class="actions"><button type="button" class="primary" id="importPrintingCsv">Import Printing History</button><button type="button" class="secondary" id="refreshPrinting">Refresh Calculation</button></div>
+ <div class="actions"><button type="button" class="primary" id="importPrintingCsv">Import Printing History</button><button type="button" class="secondary" id="refreshPrinting">Refresh Calculation</button><button type="button" class="danger" id="clearPrinting">Clear Calculation</button></div>
  <div id="printingImportMessage" class="notice">No printing history imported yet. Purchase and Mandi Issue sections remain unchanged.</div>
 </section>
 <section class="stats">
@@ -579,9 +579,8 @@ render();
 
 <script>
 (function(){
- const STORE='krblPrintingHistory_v1';
+ // Printing CSV data is kept in memory only for temporary calculation; never persisted.
  let printingRows=[];
- try{printingRows=JSON.parse(localStorage.getItem(STORE)||'[]')}catch(e){printingRows=[]}
  const $p=id=>document.getElementById(id);
  const fmt=v=>Number(v||0).toLocaleString('en-IN');
  function issueCapacity(mandi,code){
@@ -633,11 +632,16 @@ render();
   const incoming=data.slice(1).filter(r=>r.some(v=>String(v||'').trim())).map(r=>({mandi,code,gutka:String(r[gutkaIdx]||'').trim(),bagType:bagsIdx>=0?String(r[bagsIdx]||'').trim():'',printed:Number(String(r[idx]||'').replace(/,/g,''))||0,importedAt:new Date().toISOString()})).filter(r=>r.gutka);
   if(!incoming.length){alert('No valid printing records found.');return}
   printingRows=printingRows.filter(r=>!(String(r.mandi||'').toLowerCase()===mandi.toLowerCase() && String(r.code||'').toLowerCase()===code.toLowerCase())).concat(incoming);
-  localStorage.setItem(STORE,JSON.stringify(printingRows));
-  $p('printingImportMessage').textContent=incoming.length+' printing records imported for '+mandi+'. Total printed tags: '+fmt(incoming.reduce((a,r)=>a+r.printed,0))+'. Re-importing this mandi/code replaces its previous imported rows only.';
+    $p('printingImportMessage').textContent=incoming.length+' printing records imported for '+mandi+'. Total printed tags: '+fmt(incoming.reduce((a,r)=>a+r.printed,0))+'. Re-importing this mandi/code replaces its previous imported rows only.';
   renderPrinting();
  });
  $p('refreshPrinting')?.addEventListener('click',renderPrinting);
+ $p('clearPrinting')?.addEventListener('click',()=>{
+  printingRows=[];
+  const fileInput=$p('printingCsv');if(fileInput)fileInput.value='';
+  $p('printingImportMessage').textContent='Temporary printing data cleared. No printing CSV data is stored.';
+  renderPrinting();
+ });
  $p('printingMandi')?.addEventListener('input',renderPrinting);
  $p('printingCode')?.addEventListener('input',renderPrinting);
  document.querySelector('[data-page="printing"]')?.addEventListener('click',()=>setTimeout(renderPrinting,0));
